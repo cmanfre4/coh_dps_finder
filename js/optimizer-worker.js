@@ -34,17 +34,19 @@ self.onmessage = function(e) {
     let aoeChains = null;
     const nt = numTargets || 1;
     if (nt > 1) {
-      // Create AoE-scaled copies of all powers
-      const aoePowers = allPowers.map(p => {
-        const targetsHit = Math.min(nt, p.maxTargetsHit || 1);
-        return {
-          ...p,
-          totalDamage: p.totalDamage * targetsHit,
-          dpa: (p.totalDamage * targetsHit) / p.arcanaTime,
-          _aoeDamageMultiplier: targetsHit,
-          _originalDamage: p.totalDamage,
-        };
-      });
+      // Only include powers that hit multiple targets for AoE chains
+      const aoePowers = allPowers
+        .filter(p => (p.maxTargetsHit || 1) > 1)
+        .map(p => {
+          const targetsHit = Math.min(nt, p.maxTargetsHit);
+          return {
+            ...p,
+            totalDamage: p.totalDamage * targetsHit,
+            dpa: (p.totalDamage * targetsHit) / p.arcanaTime,
+            _aoeDamageMultiplier: targetsHit,
+            _originalDamage: p.totalDamage,
+          };
+        });
 
       self.postMessage({ type: 'pass', pass: `AoE (${nt}t)` });
       aoeChains = optimizeChains(aoePowers, buffPowers || [], rechargeReduction, activationLatency || 0, `AoE (${nt}t)`, 10);
