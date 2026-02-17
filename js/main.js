@@ -2,7 +2,6 @@
 
 import { loadArchetypeTables, loadAllPowers } from './data.js';
 import { parsePowers } from './power-parser.js';
-import { optimizeChains, greedyChain } from './chain-optimizer.js';
 import { renderPowerList, renderResults, initEnhancementControls, getEnhancementConfigFromUI } from './ui.js';
 import { applyEnhancements, getDefaultSlotConfig } from './enhancements.js';
 
@@ -14,6 +13,7 @@ const state = {
   tables: null,
   rawPowers: null,
   parsedPowers: null,
+  worker: null,
 };
 
 async function init() {
@@ -57,7 +57,7 @@ async function init() {
   } catch (err) {
     console.error('Failed to load data:', err);
     document.getElementById('power-list').innerHTML =
-      `<div class="error-msg">Failed to load power data: ${err.message}</div>`;
+      `<div class="error-msg">Failed to load power data: ${err && err.message || String(err)}</div>`;
   }
 }
 
@@ -80,27 +80,59 @@ async function runOptimizer() {
 
   renderPowerList(enhancedPowers, document.getElementById('power-list'));
 
-  // Use setTimeout to let the UI update before heavy computation
-  setTimeout(() => {
-    try {
-      const chains = optimizeChains(enhancedPowers, state.rechargeBonus);
-      renderResults(chains, resultsContent);
+  // Terminate any existing worker
+  if (state.worker) {
+    state.worker.terminate();
+    state.worker = null;
+  }
 
-      // Also show greedy chain for comparison
-      const greedy = greedyChain(enhancedPowers, state.rechargeBonus);
-      if (greedy) {
-        console.log('Greedy chain DPS:', greedy.dps.toFixed(1),
-          greedy.powers.map(p => p.name).join(' > '));
-      }
-    } catch (err) {
-      console.error('Optimization error:', err);
-      resultsContent.innerHTML =
-        `<div class="error-msg">Optimization failed: ${err.message}</div>`;
+  // Run optimizer in a Web Worker
+  const worker = new Worker('js/optimizer-worker.js');
+  state.worker = worker;
+
+  worker.onmessage = (e) => {
+    const msg = e.data;
+
+    if (msg.type === 'progress') {
+      const progressText = msg.skipped
+        ? `Chain length ${msg.length}: ${msg.reason}`
+        : `Chain length ${msg.length}: ${msg.checked?.toLocaleString() || 0} / ${msg.totalCombos?.toLocaleString() || '?'} checked${msg.bestDps ? ` (best: ${msg.bestDps.toFixed(1)} DPS)` : ''}`;
+      resultsContent.innerHTML = `<p class="loading">${progressText}</p>`;
     }
 
+    if (msg.type === 'result') {
+      renderResults(msg.chains, resultsContent);
+      runBtn.disabled = false;
+      runBtn.textContent = 'Find Optimal Chain';
+      worker.terminate();
+      state.worker = null;
+    }
+
+    if (msg.type === 'error') {
+      console.error('Worker error:', msg.message);
+      resultsContent.innerHTML =
+        `<div class="error-msg">Optimization failed: ${msg.message}</div>`;
+      runBtn.disabled = false;
+      runBtn.textContent = 'Find Optimal Chain';
+      worker.terminate();
+      state.worker = null;
+    }
+  };
+
+  worker.onerror = (e) => {
+    console.error('Worker crashed:', e);
+    resultsContent.innerHTML =
+      `<div class="error-msg">Optimization failed: ${e.message || 'Worker crashed'}</div>`;
     runBtn.disabled = false;
     runBtn.textContent = 'Find Optimal Chain';
-  }, 50);
+    state.worker = null;
+  };
+
+  // Send powers data to worker (serializable plain objects)
+  worker.postMessage({
+    powers: enhancedPowers,
+    rechargeReduction: state.rechargeBonus,
+  });
 }
 
 init();
