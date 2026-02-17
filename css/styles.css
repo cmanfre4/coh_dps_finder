@@ -389,3 +389,130 @@ input[type="range"]::-moz-range-thumb {
 .checkbox-item input[type="checkbox"] {
   accent-color: var(--highlight);
 }
+
+/* Enhancement panel */
+.enh-panel .control-group {
+  margin-bottom: 0.75rem;
+}
+
+.enh-slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.enh-slider-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 28px;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.enh-slider-row label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.enh-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.enh-slot-meter {
+  margin-bottom: 0.75rem;
+}
+
+.enh-slot-meter-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.enh-slot-pips {
+  display: flex;
+  gap: 3px;
+}
+
+.enh-pip {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  transition: background 0.15s;
+}
+
+.enh-pip.dmg {
+  background: var(--highlight);
+}
+
+.enh-pip.rech {
+  background: var(--warning);
+}
+
+.enh-pip.over {
+  background: #e74c3c;
+  animation: pip-pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes pip-pulse {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
+}
+
+.enh-readouts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.enh-readout {
+  background: var(--bg-card);
+  border-radius: 4px;
+  padding: 0.4rem 0.5rem;
+  text-align: center;
+}
+
+.enh-readout-label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.15rem;
+}
+
+.enh-readout-value {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.enh-readout:first-child .enh-readout-value {
+  color: var(--highlight);
+}
+
+.enh-readout:last-child .enh-readout-value {
+  color: var(--warning);
+}
+
+.enh-slot-meter.over .enh-slot-meter-label {
+  color: #e74c3c;
+}

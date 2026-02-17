@@ -1,5 +1,94 @@
 // UI rendering for the DPS calculator
 
+import { effectiveEnhancement } from './enhancements.js';
+
+// Set up enhancement control event handlers
+// Returns a callback that reads the current enhancement config
+export function initEnhancementControls(onChange) {
+  const preset = document.getElementById('enh-preset');
+  const dmgSlider = document.getElementById('enh-damage-slider');
+  const rechSlider = document.getElementById('enh-recharge-slider');
+  const dmgDisplay = document.getElementById('enh-damage-display');
+  const rechDisplay = document.getElementById('enh-recharge-display');
+  const dmgEff = document.getElementById('enh-dmg-eff');
+  const rechEff = document.getElementById('enh-rech-eff');
+  const slotMeter = document.getElementById('enh-slot-meter');
+  const slotCount = document.getElementById('enh-slot-count');
+  const pipsContainer = document.querySelector('.enh-slot-pips');
+
+  function updateDisplay() {
+    const dmg = parseInt(dmgSlider.value, 10);
+    const rech = parseInt(rechSlider.value, 10);
+    const total = dmg + rech;
+    const isOver = total > 6;
+
+    dmgDisplay.textContent = dmg;
+    rechDisplay.textContent = rech;
+
+    dmgEff.textContent = `+${effectiveEnhancement(dmg).toFixed(1)}%`;
+    rechEff.textContent = `+${effectiveEnhancement(rech).toFixed(1)}%`;
+
+    // Slot pips
+    slotCount.textContent = `${total} / 6`;
+    slotMeter.classList.toggle('over', isOver);
+
+    let pipsHtml = '';
+    for (let i = 0; i < Math.max(total, 6); i++) {
+      let cls = '';
+      if (i < dmg) cls = isOver ? 'over' : 'dmg';
+      else if (i < total) cls = isOver ? 'over' : 'rech';
+      pipsHtml += `<span class="enh-pip ${cls}"></span>`;
+    }
+    pipsContainer.innerHTML = pipsHtml;
+  }
+
+  function syncPreset() {
+    const dmg = parseInt(dmgSlider.value, 10);
+    const rech = parseInt(rechSlider.value, 10);
+    if (dmg === 3 && rech === 3) preset.value = '3/3';
+    else if (dmg === 5 && rech === 1) preset.value = '5/1';
+    else if (dmg === 0 && rech === 0) preset.value = '0/0';
+    else preset.value = 'custom';
+  }
+
+  preset.addEventListener('change', () => {
+    const val = preset.value;
+    if (val === '3/3') { dmgSlider.value = 3; rechSlider.value = 3; }
+    else if (val === '5/1') { dmgSlider.value = 5; rechSlider.value = 1; }
+    else if (val === '0/0') { dmgSlider.value = 0; rechSlider.value = 0; }
+    updateDisplay();
+    onChange();
+  });
+
+  dmgSlider.addEventListener('input', () => {
+    updateDisplay();
+    syncPreset();
+    onChange();
+  });
+
+  rechSlider.addEventListener('input', () => {
+    updateDisplay();
+    syncPreset();
+    onChange();
+  });
+
+  updateDisplay();
+}
+
+export function getEnhancementConfigFromUI() {
+  const dmg = parseInt(document.getElementById('enh-damage-slider').value, 10);
+  const rech = parseInt(document.getElementById('enh-recharge-slider').value, 10);
+  return {
+    global: {
+      damage: dmg,
+      recharge: rech,
+      accuracy: 0,
+      endurance: 0,
+    },
+    perPower: {},
+  };
+}
+
 export function renderPowerList(powers, container) {
   container.innerHTML = '';
 

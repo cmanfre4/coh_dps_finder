@@ -3,7 +3,8 @@
 import { loadArchetypeTables, loadAllPowers } from './data.js';
 import { parsePowers } from './power-parser.js';
 import { optimizeChains, greedyChain } from './chain-optimizer.js';
-import { renderPowerList, renderResults } from './ui.js';
+import { renderPowerList, renderResults, initEnhancementControls, getEnhancementConfigFromUI } from './ui.js';
+import { applyEnhancements, getDefaultSlotConfig } from './enhancements.js';
 
 const state = {
   archetype: 'blaster',
@@ -33,6 +34,9 @@ async function init() {
   });
 
   runBtn.addEventListener('click', () => runOptimizer());
+
+  // Enhancement controls (no-op onChange during init; just sets up listeners)
+  initEnhancementControls(() => {});
 
   // Load data
   try {
@@ -69,16 +73,21 @@ async function runOptimizer() {
   state.parsedPowers = await parsePowers(
     state.rawPowers, state.tables, state.archetype, state.powerset, state.level
   );
-  renderPowerList(state.parsedPowers, document.getElementById('power-list'));
+
+  // Apply enhancements to parsed powers
+  const enhConfig = getEnhancementConfigFromUI();
+  const enhancedPowers = state.parsedPowers.map(p => applyEnhancements(p, enhConfig));
+
+  renderPowerList(enhancedPowers, document.getElementById('power-list'));
 
   // Use setTimeout to let the UI update before heavy computation
   setTimeout(() => {
     try {
-      const chains = optimizeChains(state.parsedPowers, state.rechargeBonus);
+      const chains = optimizeChains(enhancedPowers, state.rechargeBonus);
       renderResults(chains, resultsContent);
 
       // Also show greedy chain for comparison
-      const greedy = greedyChain(state.parsedPowers, state.rechargeBonus);
+      const greedy = greedyChain(enhancedPowers, state.rechargeBonus);
       if (greedy) {
         console.log('Greedy chain DPS:', greedy.dps.toFixed(1),
           greedy.powers.map(p => p.name).join(' > '));

@@ -9,13 +9,17 @@ const TOP_N = 5;
 // Number of full cycles to simulate for Defiance to reach steady state
 const DEFIANCE_WARMUP_CYCLES = 3;
 
-export function optimizeChains(powers, rechargeReduction) {
+export function optimizeChains(powers, rechargeReduction, enhancementConfig = null) {
   if (!powers || powers.length === 0) return [];
 
-  const powersWithRecharge = powers.map(p => ({
-    ...p,
-    effectiveRecharge: p.rechargeTime / (1 + rechargeReduction / 100),
-  }));
+  const powersWithRecharge = powers.map(p => {
+    // Per-power enhancement recharge (from slotted SOs) adds to global recharge in denominator
+    const enhRecharge = p.enhRecharge || 0;
+    return {
+      ...p,
+      effectiveRecharge: p.rechargeTime / (1 + enhRecharge / 100 + rechargeReduction / 100),
+    };
+  });
 
   const results = [];
 
@@ -212,10 +216,13 @@ function normalizeChainKey(slugs) {
 export function greedyChain(powers, rechargeReduction, maxLength = 20) {
   if (!powers || powers.length === 0) return null;
 
-  const powersWithRecharge = powers.map(p => ({
-    ...p,
-    effectiveRecharge: p.rechargeTime / (1 + rechargeReduction / 100),
-  }));
+  const powersWithRecharge = powers.map(p => {
+    const enhRecharge = p.enhRecharge || 0;
+    return {
+      ...p,
+      effectiveRecharge: p.rechargeTime / (1 + enhRecharge / 100 + rechargeReduction / 100),
+    };
+  });
 
   const byDpa = [...powersWithRecharge].sort((a, b) => b.dpa - a.dpa);
 

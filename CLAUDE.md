@@ -138,3 +138,34 @@ Rain of Fire creates a `Pets_RainofFire` entity (found via `params.type: EntCrea
 - **Feasibility:** In a repeating cycle, the gap between consecutive uses of the same power must be ≥ its effective recharge
 - **Defiance simulation:** Run 3 warmup cycles to reach steady-state buff stacks, measure the 4th cycle
 - Exhaustive search up to chain length 8 with all powers competing equally regardless of target type
+
+## Enhancement System
+
+### Enhancement Diversification (ED)
+
+Diminishing returns when stacking the same enhancement aspect:
+- `E < 70%`: full value
+- `70% ≤ E < 90%`: `70 + 0.9 × (E - 70)`
+- `90% ≤ E < 100%`: `88 + 0.7 × (E - 90)`
+- `E ≥ 100%`: `95 + 0.15 × (E - 100)`
+
+### SO Schedule A
+
+Each SO provides 33.33% (1/3) enhancement. Common slotting:
+- 3 Damage SOs: 99.99% raw → ~95.0% post-ED
+- 3 Recharge SOs: 99.99% raw → ~95.0% post-ED
+- 2 SOs: 66.66% raw → 66.66% post-ED (under threshold, no reduction)
+
+### Application Order
+
+1. Parse base power stats
+2. Apply per-power enhancement modifiers → `enhancedDamage`, `enhRecharge`
+3. Apply global recharge bonus (from set bonuses, Hasten, incarnate)
+4. Effective recharge: `baseRecharge / (1 + enhRecharge/100 + globalRecharge/100)`
+5. Enhanced damage: `baseDamage * (1 + dmgEnhPercent/100)`
+
+### Architecture
+
+- `js/enhancements.js` — ED formula, SO values, slot config, `applyEnhancements()`
+- Slot config structure supports per-power overrides: `{ global: {damage, recharge, ...}, perPower: {} }`
+- Enhancement recharge is per-power (from SOs), global recharge is from external sources — both additive in denominator
