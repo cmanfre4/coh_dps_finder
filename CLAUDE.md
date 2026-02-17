@@ -5,6 +5,7 @@ Project context and domain knowledge for the CoH DPS Attack Chain Calculator.
 ## Conventions
 
 - **Commits:** Use [Conventional Commits](https://www.conventionalcommits.org/) style — `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, etc.
+- **Wiki/Reference:** This project targets Homecoming specifically. Use the [Homecoming Wiki](https://homecoming.wiki/) as the primary reference. Do not use the Paragon Wiki (archive.paragonwiki.com) — it covers the original live servers and may have outdated or incorrect information for Homecoming.
 
 ## City of Data API
 
