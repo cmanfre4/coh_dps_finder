@@ -530,13 +530,9 @@ function deduplicateChains(chains) {
 }
 
 function normalizeChainKey(slugs) {
-  const doubled = slugs.concat(slugs);
-  let best = slugs.join(',');
-  for (let i = 1; i < slugs.length; i++) {
-    const rotation = doubled.slice(i, i + slugs.length).join(',');
-    if (rotation < best) best = rotation;
-  }
-  return best;
+  // Deduplicate by power composition: same set of powers (with counts)
+  // in any order is considered the same chain
+  return slugs.slice().sort().join(',');
 }
 
 // Rotate a chain result so it starts from the highest DPA power.
