@@ -27,6 +27,8 @@ async function init() {
 
   const latencySlider = document.getElementById('latency-slider');
   const latencyDisplay = document.getElementById('latency-display');
+  const targetsSlider = document.getElementById('targets-slider');
+  const targetsDisplay = document.getElementById('targets-display');
 
   rechargeSlider.addEventListener('input', () => {
     state.rechargeBonus = parseInt(rechargeSlider.value, 10);
@@ -35,6 +37,10 @@ async function init() {
 
   latencySlider.addEventListener('input', () => {
     latencyDisplay.textContent = `${latencySlider.value}ms`;
+  });
+
+  targetsSlider.addEventListener('input', () => {
+    targetsDisplay.textContent = targetsSlider.value;
   });
 
   levelInput.addEventListener('change', () => {
@@ -139,7 +145,7 @@ async function runOptimizer() {
     }
 
     if (msg.type === 'result') {
-      renderResults({ rangedChains: msg.rangedChains, hybridChains: msg.hybridChains }, resultsContent);
+      renderResults({ rangedChains: msg.rangedChains, hybridChains: msg.hybridChains, aoeChains: msg.aoeChains, numTargets: msg.numTargets }, resultsContent);
       runBtn.disabled = false;
       runBtn.textContent = 'Find Optimal Chain';
       worker.terminate();
@@ -170,12 +176,16 @@ async function runOptimizer() {
   const latencyMs = parseInt(document.getElementById('latency-slider').value, 10) || 0;
   const latencySec = latencyMs / 1000;
 
+  // Read number of targets for AoE optimization
+  const numTargets = parseInt(document.getElementById('targets-slider').value, 10) || 1;
+
   // Send powers data to worker (serializable plain objects)
   worker.postMessage({
     powers: attackPowers,
     buffPowers,
     rechargeReduction: state.rechargeBonus,
     activationLatency: latencySec,
+    numTargets,
   });
 }
 

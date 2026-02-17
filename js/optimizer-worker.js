@@ -19,7 +19,7 @@ const BUFF_WARMUP_CYCLES = 2;
 const BUFF_MEASURE_CYCLES = 3;
 
 self.onmessage = function(e) {
-  const { powers, buffPowers, rechargeReduction, activationLatency } = e.data;
+  const { powers, buffPowers, rechargeReduction, activationLatency, numTargets } = e.data;
 
   try {
     const rangedPowers = powers.filter(p => !p.isMelee);
@@ -31,7 +31,38 @@ self.onmessage = function(e) {
     self.postMessage({ type: 'pass', pass: 'hybrid' });
     const hybridChains = optimizeChains(allPowers, buffPowers || [], rechargeReduction, activationLatency || 0, 'Hybrid');
 
-    self.postMessage({ type: 'result', rangedChains, hybridChains });
+    let aoeChains = null;
+    const nt = numTargets || 1;
+    if (nt > 1) {
+      // Create AoE-scaled copies of all powers
+      const aoePowers = allPowers.map(p => {
+        const targetsHit = Math.min(nt, p.maxTargetsHit || 1);
+        return {
+          ...p,
+          totalDamage: p.totalDamage * targetsHit,
+          dpa: (p.totalDamage * targetsHit) / p.arcanaTime,
+          _aoeDamageMultiplier: targetsHit,
+          _originalDamage: p.totalDamage,
+        };
+      });
+
+      self.postMessage({ type: 'pass', pass: `AoE (${nt}t)` });
+      aoeChains = optimizeChains(aoePowers, buffPowers || [], rechargeReduction, activationLatency || 0, `AoE (${nt}t)`);
+
+      // Annotate chain powers with targets hit info
+      if (aoeChains) {
+        for (const chain of aoeChains) {
+          for (const p of chain.powers) {
+            const src = allPowers.find(s => s.slug === p.slug);
+            const maxHit = (src && src.maxTargetsHit) || 1;
+            p.targetsHit = Math.min(nt, maxHit);
+            p.maxTargetsHit = maxHit;
+          }
+        }
+      }
+    }
+
+    self.postMessage({ type: 'result', rangedChains, hybridChains, aoeChains, numTargets: nt });
   } catch (err) {
     self.postMessage({ type: 'error', message: String(err && err.message || err) });
   }

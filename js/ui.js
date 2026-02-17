@@ -142,13 +142,14 @@ export function renderPowerList(powers, container, buffPowers) {
   }
 }
 
-export function renderResults({ rangedChains, hybridChains }, container) {
+export function renderResults({ rangedChains, hybridChains, aoeChains, numTargets }, container) {
   container.innerHTML = '';
 
   const hasRanged = rangedChains && rangedChains.length > 0;
   const hasHybrid = hybridChains && hybridChains.length > 0;
+  const hasAoe = aoeChains && aoeChains.length > 0;
 
-  if (!hasRanged && !hasHybrid) {
+  if (!hasRanged && !hasHybrid && !hasAoe) {
     container.innerHTML = '<p class="loading">No feasible chains found.</p>';
     return;
   }
@@ -160,9 +161,13 @@ export function renderResults({ rangedChains, hybridChains }, container) {
   if (hasHybrid) {
     renderChainSection(hybridChains, container, 'hybrid', 'Melee / Hybrid Chain');
   }
+
+  if (hasAoe) {
+    renderChainSection(aoeChains, container, 'aoe', `AoE Chain (${numTargets} targets)`, true);
+  }
 }
 
-function renderChainSection(chains, container, sectionId, heading) {
+function renderChainSection(chains, container, sectionId, heading, showTargets) {
   const section = document.createElement('div');
   section.className = 'results-section';
 
@@ -176,7 +181,7 @@ function renderChainSection(chains, container, sectionId, heading) {
   const detailDiv = document.createElement('div');
   detailDiv.className = 'chain-display';
   detailDiv.id = `chain-detail-${sectionId}`;
-  detailDiv.innerHTML = renderChainDetail(best, 0);
+  detailDiv.innerHTML = renderChainDetail(best, 0, showTargets);
   section.appendChild(detailDiv);
 
   // Top chains list
@@ -200,7 +205,7 @@ function renderChainSection(chains, container, sectionId, heading) {
         </span>
       `;
       li.addEventListener('click', () => {
-        document.getElementById(`chain-detail-${sectionId}`).innerHTML = renderChainDetail(chain, i);
+        document.getElementById(`chain-detail-${sectionId}`).innerHTML = renderChainDetail(chain, i, showTargets);
         list.querySelectorAll('li').forEach(el => el.classList.remove('active'));
         li.classList.add('active');
       });
@@ -214,7 +219,7 @@ function renderChainSection(chains, container, sectionId, heading) {
   container.appendChild(section);
 }
 
-function renderChainDetail(chain, index) {
+function renderChainDetail(chain, index, showTargets) {
   const chainVisual = chain.powers
     .map(p => `<span class="chain-power">${p.name}</span>`)
     .join('<span class="chain-arrow"> &rarr; </span>');
@@ -230,6 +235,7 @@ function renderChainDetail(chain, index) {
       <td class="num">${p.defianceBuff ? `+${((p.defianceBuff - 1) * 100).toFixed(1)}%` : '-'}</td>
       <td class="num">${p.enduranceCost.toFixed(1)}</td>
       <td>${p.effectArea === 'SingleTarget' ? 'ST' : p.effectArea}</td>
+      ${showTargets ? `<td class="num">${p.targetsHit || 1}</td>` : ''}
     </tr>
   `).join('');
 
@@ -275,6 +281,7 @@ function renderChainDetail(chain, index) {
           <th>Defiance</th>
           <th>End</th>
           <th>Area</th>
+          ${showTargets ? '<th>Targets</th>' : ''}
         </tr>
       </thead>
       <tbody>${breakdownRows}</tbody>

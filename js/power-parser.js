@@ -98,6 +98,7 @@ async function parseSinglePower(slug, data, namedTables, levelIndex, archetype, 
     isBuff,
     isMelee,
     isRedirected,
+    maxTargetsHit: (data.max_targets_hit || 0) === 0 ? 1 : data.max_targets_hit,
     availableLevel: data.available_level || 1,
   };
 }
@@ -151,6 +152,7 @@ async function parseRainOfFire(slug, data, namedTables, levelIndex, archetype, p
     isMelee: false,
     isRedirected: false,
     isPetDamage: true,
+    maxTargetsHit: 16,
     availableLevel: data.available_level || 1,
   };
 }
