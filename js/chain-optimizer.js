@@ -11,6 +11,8 @@ const TOP_N = 5;
 const DEFIANCE_WARMUP_CYCLES = 3;
 // Skip chains where estimated wait time would exceed this multiple of cast time
 const MAX_WAIT_RATIO = 3;
+// Max results to accumulate before pruning (performance guard)
+const MAX_RESULTS_PER_LENGTH = 500;
 
 export function optimizeChains(powers, rechargeReduction, enhancementConfig = null) {
   if (!powers || powers.length === 0) return [];
@@ -41,6 +43,10 @@ function searchChains(powers, length, results) {
   const numPowers = powers.length;
   const totalCombos = Math.pow(numPowers, length);
 
+  // Track best DPS this length to prune weak chains
+  let bestDpsThisLength = 0;
+  let lengthResults = [];
+
   for (let combo = 0; combo < totalCombos; combo++) {
     let temp = combo;
     for (let i = length - 1; i >= 0; i--) {
@@ -50,12 +56,21 @@ function searchChains(powers, length, results) {
 
     const chain = indices.map(i => powers[i]);
 
-    if (!isChainWorthSimulating(chain)) continue;
+    // Fast path: check strict feasibility (no waits needed)
+    // Slow path: if not strictly feasible, check if waits are reasonable
+    if (!isChainFeasible(chain) && !isChainWorthSimulating(chain)) continue;
 
     // Simulate with Defiance buffs and cooldown waits for accurate DPS
     const simResult = simulateChainWithDefiance(chain);
 
-    results.push({
+    // Skip if DPS is clearly not competitive (>30% below best for this length)
+    if (simResult.dps < bestDpsThisLength * 0.7 && lengthResults.length >= TOP_N) continue;
+
+    if (simResult.dps > bestDpsThisLength) {
+      bestDpsThisLength = simResult.dps;
+    }
+
+    lengthResults.push({
       powers: chain.map((p, i) => ({
         slug: p.slug,
         name: p.name,
@@ -77,7 +92,16 @@ function searchChains(powers, length, results) {
       length,
       avgDefianceBuff: simResult.avgDefianceMult,
     });
+
+    // Periodic pruning to keep memory bounded
+    if (lengthResults.length >= MAX_RESULTS_PER_LENGTH * 2) {
+      lengthResults.sort((a, b) => b.dps - a.dps);
+      lengthResults = lengthResults.slice(0, MAX_RESULTS_PER_LENGTH);
+      bestDpsThisLength = lengthResults[0].dps;
+    }
   }
+
+  results.push(...lengthResults);
 }
 
 // Simulate a repeating chain with Defiance buff tracking and cooldown waits.
@@ -168,7 +192,44 @@ function simulateChainWithDefiance(chain) {
   };
 }
 
-// Quick pre-filter to skip chains that would have absurd wait times.
+// Fast geometric feasibility check: can this chain repeat without any waits?
+// Checks that the gap between consecutive uses of each power >= its effective recharge.
+function isChainFeasible(chain) {
+  const totalTime = chain.reduce((sum, p) => sum + p.arcanaTime, 0);
+
+  const usagesBySlug = {};
+  let timePos = 0;
+  for (let i = 0; i < chain.length; i++) {
+    const slug = chain[i].slug;
+    if (!usagesBySlug[slug]) usagesBySlug[slug] = [];
+    usagesBySlug[slug].push({
+      time: timePos,
+      recharge: chain[i].effectiveRecharge,
+    });
+    timePos += chain[i].arcanaTime;
+  }
+
+  for (const [slug, usages] of Object.entries(usagesBySlug)) {
+    for (let i = 0; i < usages.length; i++) {
+      const nextIdx = (i + 1) % usages.length;
+      let gap;
+      if (nextIdx > i) {
+        gap = usages[nextIdx].time - usages[i].time;
+      } else {
+        gap = (totalTime - usages[i].time) + usages[nextIdx].time;
+      }
+
+      if (gap < usages[i].recharge - 0.001) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+// Slower pre-filter for chains that aren't strictly feasible.
+// Allows chains with moderate wait times (for low-recharge scenarios).
 // For each power appearing K times, the repeating cycle needs at least
 // K * effectiveRecharge total time. If that far exceeds the cast time, skip.
 function isChainWorthSimulating(chain) {
