@@ -2,6 +2,10 @@
 
 Project context and domain knowledge for the CoH DPS Attack Chain Calculator.
 
+## Conventions
+
+- **Commits:** Use [Conventional Commits](https://www.conventionalcommits.org/) style — `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, etc.
+
 ## City of Data API
 
 Base URL: `https://cod.cohcb.com/homecoming`
