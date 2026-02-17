@@ -169,3 +169,45 @@ Each SO provides 33.33% (1/3) enhancement. Common slotting:
 - `js/enhancements.js` — ED formula, SO values, slot config, `applyEnhancements()`
 - Slot config structure supports per-power overrides: `{ global: {damage, recharge, ...}, perPower: {} }`
 - Enhancement recharge is per-power (from SOs), global recharge is from external sources — both additive in denominator
+
+## Procs (Future)
+
+Proc enhancements (Invention Origin "Proc" IOs) add a chance for bonus damage on power activation. They are slotted like regular enhancements but instead of boosting an aspect, they have a % chance to fire extra damage.
+
+### Proc Per Minute (PPM) Formula
+
+Modern procs use the PPM system. The chance to fire depends on the power's properties:
+
+```
+proc_chance = PPM × (recharge_time + cast_time) / (60 × area_factor)
+```
+
+- `PPM` — the proc's rate (e.g., 3.5 PPM for most damage procs)
+- `recharge_time` — the power's **base** recharge (before any recharge bonuses)
+- `cast_time` — the power's activation time
+- `area_factor` — 1.0 for SingleTarget, scales up for AoE (based on radius/arc)
+- Proc chance is capped at 90%
+
+### Key Implications for the Optimizer
+
+- Procs favor powers with **long base recharge** and **long cast times** (higher proc chance)
+- Procs favor **single-target** powers over AoE (area_factor = 1 vs higher)
+- Some powers become "proc mules" — slotted primarily for procs rather than base damage
+- Procs take enhancement slots, competing with damage/recharge SOs
+- Per-power slotting becomes essential (some powers get 5 procs + 1 acc, others stay SO-heavy)
+- Recharge bonuses do NOT affect proc chance (formula uses base recharge), but they DO affect how often you can use the power — this creates a tension between proc rate and power cycling
+
+### Common Damage Procs
+
+- Apocalypse: 3.5 PPM, Negative Energy damage
+- Armageddon: 3.5 PPM, Fire damage
+- Gladiator's Javelin: 3.5 PPM, Lethal damage (ranged)
+- Many others across various IO sets
+
+### Architecture Considerations
+
+- Requires per-power slotting (can't globally assign procs)
+- Each proc needs: PPM value, damage amount, damage type
+- Need area_factor calculation per power (from effect_area + radius/arc data)
+- Proc damage is added as a separate damage component (not enhanced by damage SOs)
+- Slot budget becomes a constrained optimization: N damage SOs + M procs + accuracy ≤ 6
