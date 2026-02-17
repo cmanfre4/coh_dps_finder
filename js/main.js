@@ -53,7 +53,11 @@ async function init() {
       state.rawPowers, state.tables, state.archetype, state.powerset, state.level
     );
 
-    renderPowerList(state.parsedPowers.filter(p => !p.isBuff), document.getElementById('power-list'));
+    renderPowerList(
+      state.parsedPowers.filter(p => !p.isBuff),
+      document.getElementById('power-list'),
+      state.parsedPowers.filter(p => p.isBuff)
+    );
 
     // Validate Flares damage
     const flares = state.parsedPowers.find(p => p.slug === 'flares');
@@ -96,7 +100,7 @@ async function runOptimizer() {
   const attackPowers = enhancedPowers.filter(p => !p.isBuff);
   const buffPowers = enhancedPowers.filter(p => p.isBuff);
 
-  renderPowerList(attackPowers, document.getElementById('power-list'));
+  renderPowerList(attackPowers, document.getElementById('power-list'), buffPowers);
 
   // Terminate any existing worker
   if (state.worker) {

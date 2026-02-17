@@ -460,9 +460,154 @@ input[type="range"]::-moz-range-thumb {
   text-shadow: 0 0 15px var(--highlight-glow);
 }
 
-.stat-box.buff-highlight {
-  border: 1px solid var(--highlight);
-  background: rgba(255, 200, 50, 0.08);
+/* ---- Buff Overlay Section ---- */
+.buff-overlay-section {
+  margin-top: 1.25rem;
+  border: 1px solid var(--data-warm-dim);
+  clip-path: var(--clip-panel-sm);
+  overflow: hidden;
+}
+
+.buff-overlay-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  background: rgba(240, 160, 48, 0.08);
+  border-bottom: 1px solid var(--border);
+}
+
+.buff-overlay-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--data-warm);
+}
+
+.buff-overlay-desc {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.buff-overlay-body {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem;
+}
+
+.buff-overlay-dps {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 100px;
+}
+
+.buff-overlay-dps-value {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  color: var(--data-warm);
+  text-shadow: 0 0 12px rgba(240, 160, 48, 0.25);
+  line-height: 1;
+}
+
+.buff-overlay-dps-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin-top: 0.15rem;
+}
+
+.buff-overlay-dps-gain {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: #6dca6d;
+  margin-top: 0.25rem;
+}
+
+.buff-overlay-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.buff-overlay-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.buff-overlay-detail-label {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  min-width: 110px;
+  flex-shrink: 0;
+}
+
+.buff-overlay-detail-value {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-bright);
+  min-width: 55px;
+  text-align: right;
+}
+
+.buff-uptime-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--border);
+  clip-path: polygon(2px 0, 100% 0, calc(100% - 2px) 100%, 0 100%);
+}
+
+.buff-uptime-bar-fill {
+  height: 100%;
+  background: var(--data-warm);
+  transition: width 0.3s ease;
+  clip-path: polygon(2px 0, 100% 0, calc(100% - 2px) 100%, 0 100%);
+}
+
+/* ---- Power List: Buff Powers ---- */
+.power-list-divider {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--data-warm-dim);
+  padding: 0.6rem 0.35rem 0.3rem;
+  margin-top: 0.4rem;
+  border-top: 1px solid var(--border);
+}
+
+.buff-power-item .power-buff-value {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  color: var(--data-warm);
+  white-space: nowrap;
+  font-size: 0.82rem;
+}
+
+/* ---- Top Chains: Buffed DPS ---- */
+.chain-dps-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.chain-dps-buffed {
+  font-family: var(--font-mono);
+  color: var(--data-warm);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.chain-dps-buffed::after {
+  content: ' / ';
+  color: var(--text-secondary);
+  font-weight: 400;
 }
 
 /* ---- Breakdown Table ---- */

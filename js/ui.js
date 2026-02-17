@@ -91,7 +91,7 @@ export function getEnhancementConfigFromUI() {
   };
 }
 
-export function renderPowerList(powers, container) {
+export function renderPowerList(powers, container, buffPowers) {
   container.innerHTML = '';
 
   if (!powers || powers.length === 0) {
@@ -114,6 +114,31 @@ export function renderPowerList(powers, container) {
       <span class="power-dpa">${power.dpa.toFixed(1)} DPA</span>
     `;
     container.appendChild(item);
+  }
+
+  // Show buff powers if any
+  if (buffPowers && buffPowers.length > 0) {
+    const divider = document.createElement('div');
+    divider.className = 'power-list-divider';
+    divider.textContent = 'Click Buffs (used on cooldown)';
+    container.appendChild(divider);
+
+    for (const power of buffPowers) {
+      const dmgBuff = (power.buffs || []).find(b => b.table.toLowerCase() !== 'ranged_ones');
+      const buffPct = dmgBuff ? (dmgBuff.resolvedScale * 100).toFixed(1) : '?';
+      const buffDur = dmgBuff ? dmgBuff.duration.toFixed(0) : '?';
+
+      const item = document.createElement('div');
+      item.className = 'power-item buff-power-item';
+      item.innerHTML = `
+        <span class="power-name">${power.name}</span>
+        <span class="power-stats">
+          ${power.castTime.toFixed(2)}s cast | ${power.rechargeTime.toFixed(1)}s rech
+        </span>
+        <span class="power-buff-value">+${buffPct}% dmg / ${buffDur}s</span>
+      `;
+      container.appendChild(item);
+    }
   }
 }
 
@@ -145,10 +170,13 @@ export function renderResults(chains, container) {
       const li = document.createElement('li');
       li.className = i === 0 ? 'active' : '';
       const label = chain.powers.map(p => p.name).join(' > ');
-      const displayDps = chain.buffedDps || chain.dps;
+      const hasBuff = chain.buffedDps != null;
       li.innerHTML = `
         <span class="chain-label">${i + 1}. ${label}</span>
-        <span class="chain-dps">${displayDps.toFixed(1)} DPS</span>
+        <span class="chain-dps-group">
+          ${hasBuff ? `<span class="chain-dps-buffed">${chain.buffedDps.toFixed(1)}</span>` : ''}
+          <span class="chain-dps">${chain.dps.toFixed(1)} DPS</span>
+        </span>
       `;
       li.addEventListener('click', () => {
         document.getElementById('chain-detail').innerHTML = renderChainDetail(chain, i);
@@ -182,35 +210,19 @@ function renderChainDetail(chain, index) {
     </tr>
   `).join('');
 
-  // Buff overlay stats (Aim, Build Up, etc.)
   const hasBuffOverlay = chain.buffedDps != null;
-  const buffStatsHtml = hasBuffOverlay ? `
-      <div class="stat-box buff-highlight">
-        <div class="stat-label">Buffed DPS</div>
-        <div class="stat-value dps">${chain.buffedDps.toFixed(1)}</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-label">${(chain.buffPowerNames || ['Buff']).join(' + ')} Uptime</div>
-        <div class="stat-value">${(chain.buffUptime * 100).toFixed(1)}%</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-label">Avg Buff Mult</div>
-        <div class="stat-value">${chain.avgBuffMult.toFixed(3)}x</div>
-      </div>` : '';
+
+  // Buff overlay section — a visually distinct block explaining what's happening
+  const buffOverlayHtml = hasBuffOverlay ? renderBuffOverlay(chain) : '';
 
   return `
     <h3>${index === 0 ? 'Optimal' : `#${index + 1}`} Attack Chain</h3>
     <div class="chain-visual">${chainVisual}<span class="chain-arrow"> &circlearrowleft;</span></div>
     <div class="chain-stats">
-      ${hasBuffOverlay ? `
-      <div class="stat-box">
-        <div class="stat-label">Chain DPS</div>
-        <div class="stat-value">${chain.dps.toFixed(1)}</div>
-      </div>` : `
       <div class="stat-box">
         <div class="stat-label">DPS</div>
         <div class="stat-value dps">${chain.dps.toFixed(1)}</div>
-      </div>`}
+      </div>
       <div class="stat-box">
         <div class="stat-label">Cycle Time</div>
         <div class="stat-value">${chain.totalTime.toFixed(2)}s</div>
@@ -227,7 +239,6 @@ function renderChainDetail(chain, index) {
         <div class="stat-label">End/sec</div>
         <div class="stat-value">${chain.eps.toFixed(2)}</div>
       </div>
-      ${buffStatsHtml}
     </div>
     <table class="breakdown-table" style="margin-top: 1rem;">
       <thead>
@@ -245,5 +256,45 @@ function renderChainDetail(chain, index) {
       </thead>
       <tbody>${breakdownRows}</tbody>
     </table>
+    ${buffOverlayHtml}
+  `;
+}
+
+function renderBuffOverlay(chain) {
+  const buffNames = (chain.buffPowerNames || []).join(' + ');
+  const uptimePct = (chain.buffUptime * 100).toFixed(1);
+  const dpsGain = chain.buffedDps - chain.dps;
+  const dpsPct = ((dpsGain / chain.dps) * 100).toFixed(1);
+
+  // Width of the uptime bar (capped at 100%)
+  const barWidth = Math.min(chain.buffUptime * 100, 100);
+
+  return `
+    <div class="buff-overlay-section">
+      <div class="buff-overlay-header">
+        <span class="buff-overlay-title">With ${buffNames}</span>
+        <span class="buff-overlay-desc">Fired on cooldown between chain rotations</span>
+      </div>
+      <div class="buff-overlay-body">
+        <div class="buff-overlay-dps">
+          <span class="buff-overlay-dps-value">${chain.buffedDps.toFixed(1)}</span>
+          <span class="buff-overlay-dps-label">DPS</span>
+          <span class="buff-overlay-dps-gain">+${dpsGain.toFixed(1)} (+${dpsPct}%)</span>
+        </div>
+        <div class="buff-overlay-details">
+          <div class="buff-overlay-detail-row">
+            <span class="buff-overlay-detail-label">Buff Uptime</span>
+            <div class="buff-uptime-bar-track">
+              <div class="buff-uptime-bar-fill" style="width: ${barWidth}%"></div>
+            </div>
+            <span class="buff-overlay-detail-value">${uptimePct}%</span>
+          </div>
+          <div class="buff-overlay-detail-row">
+            <span class="buff-overlay-detail-label">Avg Damage Bonus</span>
+            <span class="buff-overlay-detail-value">+${((chain.avgBuffMult - 1) * 100).toFixed(1)}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
   `;
 }
