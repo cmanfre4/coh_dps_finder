@@ -14,7 +14,14 @@ const BASE_URL = 'https://cod.cohcb.com/homecoming';
 
 const POWERSETS = [
   { archetype: 'blaster', category: 'blaster_ranged', powerset: 'fire_blast' },
+  { archetype: 'blaster', category: 'blaster_support', powerset: 'fire_manipulation' },
 ];
+
+// Hardcoded power slugs per powerset (no powerset index endpoint exists)
+const POWER_SLUGS = {
+  fire_blast: ['flares', 'fire_blast', 'fire_ball', 'fire_breath', 'aim', 'blaze', 'blazing_bolt', 'inferno', 'rain_of_fire'],
+  fire_manipulation: ['ring_of_fire', 'fire_sword', 'build_up', 'combustion', 'blazing_aura', 'hot_feet', 'burn', 'consume', 'fire_sword_circle'],
+};
 
 async function fetchJSON(url) {
   console.log(`  GET ${url}`);
@@ -38,29 +45,27 @@ async function fetchArchetypeTables(archetype) {
 }
 
 async function fetchPowerset(archetype, category, powerset) {
-  console.log(`\nFetching powerset index: ${category}/${powerset}...`);
-  const index = await fetchJSON(`${BASE_URL}/powers/${category}/${powerset}.json`);
+  console.log(`\nFetching powerset: ${category}/${powerset}...`);
   const setDir = join(DATA_DIR, archetype, powerset);
-  saveJSON(join(setDir, 'index.json'), index);
+  const powerSlugs = POWER_SLUGS[powerset];
 
-  const powers = index.powers || index;
-  const powerNames = Array.isArray(powers)
-    ? powers.map(p => typeof p === 'string' ? p : p.name || p.power_name)
-    : Object.keys(powers);
+  if (!powerSlugs) {
+    console.error(`  No hardcoded power slugs for ${powerset}`);
+    return;
+  }
 
-  for (const powerName of powerNames) {
-    const slug = powerName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '');
-    console.log(`\nFetching power: ${powerName}...`);
+  for (const slug of powerSlugs) {
+    console.log(`\nFetching power: ${slug}...`);
     try {
       const powerData = await fetchJSON(
-        `${BASE_URL}/powers/${category}/${powerset}/${encodeURIComponent(powerName)}.json`
+        `${BASE_URL}/powers/${category}/${powerset}/${slug}.json`
       );
       saveJSON(join(setDir, `${slug}.json`), powerData);
 
       // Check for redirect/pet powers (like Blazing Bolt -> quick mode)
-      await fetchPetPowers(powerData, setDir, category, powerset, powerName);
+      await fetchPetPowers(powerData, setDir, category, powerset, slug);
     } catch (err) {
-      console.error(`  ERROR fetching ${powerName}: ${err.message}`);
+      console.error(`  ERROR fetching ${slug}: ${err.message}`);
     }
   }
 }

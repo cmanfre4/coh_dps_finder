@@ -42,6 +42,12 @@ function getPowerSlugs(archetype, powerset) {
       'aim', 'blaze', 'blazing_bolt', 'inferno', 'rain_of_fire'
     ];
   }
+  if (archetype === 'blaster' && powerset === 'fire_manipulation') {
+    return [
+      'ring_of_fire', 'fire_sword', 'build_up', 'combustion',
+      'blazing_aura', 'hot_feet', 'consume', 'fire_sword_circle'
+    ];
+  }
   return [];
 }
 

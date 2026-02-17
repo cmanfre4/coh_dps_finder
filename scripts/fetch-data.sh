@@ -128,5 +128,85 @@ for URL_PATTERN in \
   fi
 done
 
+# ============================
+# Fire Manipulation (Blaster Secondary)
+# ============================
+CATEGORY="blaster_support"
+POWERSET="fire_manipulation"
+AT="blaster"
+POWERS="ring_of_fire fire_sword build_up combustion blazing_aura hot_feet burn consume fire_sword_circle"
+
+for SLUG in $POWERS; do
+  echo ""
+  echo "Fetching power: $SLUG..."
+  fetch_json "$BASE_URL/powers/$CATEGORY/$POWERSET/$SLUG.json" "$DATA_DIR/$AT/$POWERSET/$SLUG.json"
+done
+
+echo ""
+echo "Checking for Fire Manipulation pet/entity powers..."
+
+python3 << 'PYEOF'
+import json, os, subprocess, glob
+
+BASE_URL = "https://cod.cohcb.com/homecoming"
+DATA_DIR = "data/blaster/fire_manipulation"
+PETS_DIR = os.path.join(DATA_DIR, "pets")
+
+for fpath in sorted(glob.glob(os.path.join(DATA_DIR, "*.json"))):
+    fname = os.path.basename(fpath)
+    with open(fpath) as f:
+        data = json.load(f)
+
+    for effect in data.get("effects", []):
+        for tpl in effect.get("templates", []):
+            entity = tpl.get("entity_name", "")
+            if entity:
+                print(f"  Entity spawn in {fname}: {entity}")
+                pet_path = entity.replace(".", "/")
+                url = f"{BASE_URL}/powers/pets/{pet_path}.json"
+                slug = entity.lower().replace(".", "_")
+                dest = os.path.join(PETS_DIR, f"{slug}.json")
+                os.makedirs(PETS_DIR, exist_ok=True)
+                print(f"  Trying: {url}")
+                r = subprocess.run(["curl", "-sS", "--fail", url],
+                                   capture_output=True, text=True, timeout=10)
+                if r.returncode == 0:
+                    with open(dest, "w") as out:
+                        out.write(r.stdout)
+                    print(f"  -> {dest}")
+
+                    try:
+                        pet_data = json.loads(r.stdout)
+                        pet_powers = pet_data.get("powers", [])
+                        if isinstance(pet_powers, list):
+                            for pp in pet_powers:
+                                pname = pp if isinstance(pp, str) else pp.get("name", "")
+                                if pname:
+                                    purl = f"{BASE_URL}/powers/pets/{pet_path}/{pname.lower().replace(' ', '_')}.json"
+                                    pdest = os.path.join(PETS_DIR, f"{slug}_{pname.lower().replace(' ', '_')}.json")
+                                    print(f"  Trying pet power: {purl}")
+                                    r2 = subprocess.run(["curl", "-sS", "--fail", purl],
+                                                       capture_output=True, text=True, timeout=10)
+                                    if r2.returncode == 0:
+                                        with open(pdest, "w") as out2:
+                                            out2.write(r2.stdout)
+                                        print(f"  -> {pdest}")
+                    except Exception as e:
+                        print(f"  Parse error: {e}")
+                else:
+                    for alt in [
+                        f"{BASE_URL}/powers/{entity.replace('.', '/')}.json",
+                    ]:
+                        print(f"  Trying alt: {alt}")
+                        r2 = subprocess.run(["curl", "-sS", "--fail", alt],
+                                           capture_output=True, text=True, timeout=10)
+                        if r2.returncode == 0:
+                            with open(dest, "w") as out:
+                                out.write(r2.stdout)
+                            print(f"  -> {dest}")
+                            break
+
+PYEOF
+
 echo ""
 echo "Fetching complete!"

@@ -293,9 +293,13 @@ function simulateChainWithBuffOverlay(chainResult, buffPowers, activationLatency
 
   // Build buff power info with resolved buff data
   const buffInfos = buffPowers.map(p => {
-    // Find the click damage buff (not Defiance — exclude Ranged_Ones table)
+    // Find the click damage buff (not Defiance — exclude Ranged_Ones and Melee_Ones tables)
+    const isDefianceTable = t => {
+      const key = t.toLowerCase();
+      return key === 'ranged_ones' || key === 'melee_ones';
+    };
     const dmgBuff = (p.buffs || []).find(b =>
-      b.table.toLowerCase() !== 'ranged_ones'
+      !isDefianceTable(b.table)
     ) || (p.buffs || [])[0];
 
     return {

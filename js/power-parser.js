@@ -10,6 +10,12 @@ const DAMAGE_ATTRIBS = new Set([
   'Energy_Dmg', 'Negative_Energy_Dmg', 'Psionic_Dmg', 'Toxic_Dmg'
 ]);
 
+// Tables used for Defiance self-damage buffs (scale IS the buff percentage)
+function isDefianceTable(table) {
+  const key = table.toLowerCase();
+  return key === 'ranged_ones' || key === 'melee_ones';
+}
+
 export async function parsePowers(rawPowers, tables, archetype, powerset, level) {
   const levelIndex = level - 1;
   const namedTables = tables.named_tables;
@@ -26,6 +32,9 @@ export async function parsePowers(rawPowers, tables, archetype, powerset, level)
 }
 
 async function parseSinglePower(slug, data, namedTables, levelIndex, archetype, powerset) {
+  // Skip toggle powers (always-on auras like Blazing Aura, Hot Feet)
+  if (data.type === 'Toggle') return null;
+
   const redirects = getRedirectSlugs(slug);
   let damageData = data;
   let castTime = data.activation_time || 0;
@@ -60,7 +69,7 @@ async function parseSinglePower(slug, data, namedTables, levelIndex, archetype, 
 
   // Backward-compat: populate defiance field from the first Defiance-style buff
   // Defiance buffs use Ranged_Ones table (scale IS the percentage)
-  const defianceBuff = buffs.find(b => b.table.toLowerCase() === 'ranged_ones');
+  const defianceBuff = buffs.find(b => isDefianceTable(b.table));
   const defiance = defianceBuff
     ? { scale: defianceBuff.resolvedScale, duration: defianceBuff.duration, stacking: defianceBuff.stacking }
     : null;
@@ -116,7 +125,7 @@ async function parseRainOfFire(slug, data, namedTables, levelIndex, archetype, p
   }
 
   const buffs = extractBuffs(data, namedTables, levelIndex);
-  const defianceBuff = buffs.find(b => b.table.toLowerCase() === 'ranged_ones');
+  const defianceBuff = buffs.find(b => isDefianceTable(b.table));
   const defiance = defianceBuff
     ? { scale: defianceBuff.resolvedScale, duration: defianceBuff.duration, stacking: defianceBuff.stacking }
     : null;

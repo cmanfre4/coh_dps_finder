@@ -8,10 +8,12 @@ import { applyEnhancements, getDefaultSlotConfig } from './enhancements.js';
 const state = {
   archetype: 'blaster',
   powerset: 'fire_blast',
+  secondaryPowerset: 'fire_manipulation',
   level: 50,
   rechargeBonus: 85,
   tables: null,
   rawPowers: null,
+  rawSecondaryPowers: null,
   parsedPowers: null,
   worker: null,
 };
@@ -49,9 +51,15 @@ async function init() {
   try {
     state.tables = await loadArchetypeTables(state.archetype);
     state.rawPowers = await loadAllPowers(state.archetype, state.powerset);
-    state.parsedPowers = await parsePowers(
+    state.rawSecondaryPowers = await loadAllPowers(state.archetype, state.secondaryPowerset);
+
+    const primaryParsed = await parsePowers(
       state.rawPowers, state.tables, state.archetype, state.powerset, state.level
     );
+    const secondaryParsed = await parsePowers(
+      state.rawSecondaryPowers, state.tables, state.archetype, state.secondaryPowerset, state.level
+    );
+    state.parsedPowers = [...primaryParsed, ...secondaryParsed];
 
     renderPowerList(
       state.parsedPowers.filter(p => !p.isBuff),
@@ -69,7 +77,10 @@ async function init() {
     // Validate Aim buff parsing
     const aim = state.parsedPowers.find(p => p.slug === 'aim');
     if (aim) {
-      const dmgBuff = (aim.buffs || []).find(b => b.table.toLowerCase() !== 'ranged_ones');
+      const dmgBuff = (aim.buffs || []).find(b => {
+        const t = b.table.toLowerCase();
+        return t !== 'ranged_ones' && t !== 'melee_ones';
+      });
       console.log(`Aim isBuff: ${aim.isBuff}, buffs: ${aim.buffs.length}, dmg buff: +${dmgBuff ? (dmgBuff.resolvedScale * 100).toFixed(1) : '?'}% (expected +62.5%)`);
     }
   } catch (err) {
@@ -88,9 +99,13 @@ async function runOptimizer() {
   resultsContent.innerHTML = '<p class="loading">Finding optimal attack chains...</p>';
 
   // Re-parse powers at current level
-  state.parsedPowers = await parsePowers(
+  const primaryParsed = await parsePowers(
     state.rawPowers, state.tables, state.archetype, state.powerset, state.level
   );
+  const secondaryParsed = await parsePowers(
+    state.rawSecondaryPowers, state.tables, state.archetype, state.secondaryPowerset, state.level
+  );
+  state.parsedPowers = [...primaryParsed, ...secondaryParsed];
 
   // Apply enhancements to parsed powers
   const enhConfig = getEnhancementConfigFromUI();

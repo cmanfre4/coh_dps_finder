@@ -1,0 +1,522 @@
+{
+  "name": "Build_Up",
+  "full_name": "Blaster_Support.Fire_Manipulation.Build_Up",
+  "type": "Click",
+  "display_name": "Build Up",
+  "display_fullname": "Blaster Support.Fire Manipulation.Build Up",
+  "display_help": "Greatly boosts your attacks for a few seconds. Slightly increases chance to hit.<br><br><color #fcfc95>Recharge: Long.</color>",
+  "display_short_help": "Self +DMG +To Hit",
+  "icon": "firemanipulation_buildup.png",
+  "auto_issue": false,
+  "auto_issue_keeps_level": false,
+  "message_caster": null,
+  "message_floater": null,
+  "message_attacker_hit": null,
+  "message_target_hit": null,
+  "message_target_confirm": null,
+  "message_float_reward": null,
+  "message_defense_avoidance": null,
+  "attack_types": [
+
+  ],
+  "requires": "",
+  "activate_requires": "",
+  "accuracy": 1.0,
+  "number_allowed": 1,
+  "caster_near_ground": false,
+  "target_near_ground": false,
+  "cast_when_dead": "AliveOnly",
+  "cast_through": [
+
+  ],
+  "toggle_ignores": [
+
+  ],
+  "ignore_level_gained": false,
+  "works_on_untouchable": false,
+  "works_through_vision_phase": false,
+  "target_untargetable": false,
+  "interrupt_like_sleep": false,
+  "notify_ai_when": "Always",
+  "effect_area": "SingleTarget",
+  "max_targets_hit": 0,
+  "radius": 0.0,
+  "arc": 0.0,
+  "range": 0.0,
+  "range_secondary": 0.0,
+  "activation_time": 1.17,
+  "root_time": 0.0,
+  "interrupt_time": 0.0,
+  "recharge_time": 90.0,
+  "activate_period": 0.0,
+  "endurance_cost": 5.2,
+  "cancelable": true,
+  "self_confirm": false,
+  "confirm_requires": "",
+  "time_to_confirm": 0,
+  "chain_delay": 0.0,
+  "chain_effect_expr": "",
+  "chain_forks": [
+
+  ],
+  "chain_into_power_name": null,
+  "vec_box_offset": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "vec_box_size": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "number_of_charges": 0,
+  "max_num_charges": 0,
+  "destroy_on_last_use": true,
+  "power_lifetime": 0.0,
+  "max_power_lifetime": 0.0,
+  "power_lifetime_ingame": 0.0,
+  "max_power_lifetime_ingame": 0.0,
+  "stacking_lifetime": false,
+  "toggle_on_time": 0.0,
+  "max_toggle_on_time": 0.0,
+  "toggle_detoggle_time": 0.0,
+  "toggle_droppable": "Sometimes",
+  "ignore_toggle_max_distance": false,
+  "target_type": "Self",
+  "target_type_secondary": null,
+  "target_visibility": "LineOfSight",
+  "targets_affected": [
+    "Self"
+  ],
+  "targets_autohit": [
+    "Self"
+  ],
+  "target_requires": "",
+  "proc_allowed": "All",
+  "boosts_allowed": [
+    "Reduce Endurance Cost",
+    "Enhance Recharge Speed",
+    "Enhance ToHit Buffs"
+  ],
+  "allowed_boostset_cats": [
+    "To Hit Buff"
+  ],
+  "exclusion_groups": [
+
+  ],
+  "modes_required": [
+
+  ],
+  "modes_disallowed": [
+    "Disable_All"
+  ],
+  "recharge_groups": [
+
+  ],
+  "ignore_strength": false,
+  "strengths_disallowed": [
+
+  ],
+  "global_strengths_disallowed": [
+
+  ],
+  "procs_only_on_main_target": false,
+  "vars_attribmods_can_reference": [
+
+  ],
+  "show_buff_icon": true,
+  "show_in_info": true,
+  "show_in_manage": true,
+  "show_in_inventory": "Show",
+  "deletable": false,
+  "tradeable": false,
+  "do_not_save": false,
+  "max_boosts": 6,
+  "ignore_level_differences": false,
+  "ignore_exemplar_for_bonuses": false,
+  "boost_combinable": true,
+  "boost_tradeable": true,
+  "boost_account_bound": false,
+  "boost_boostable": false,
+  "boost_use_player_level": false,
+  "boost_catalyzable": null,
+  "boost_store_product": null,
+  "boost_min_slot_level": -3,
+  "boost_max_level": 50,
+  "instance_locked": false,
+  "is_environment_hit": false,
+  "shuffle_target_list": false,
+  "enforced_level_bought": -1,
+  "refreshes_on_active_player_change": false,
+  "highlight_expression": "",
+  "highlight_icon": null,
+  "highlight_color": "#00000000",
+  "travel_suppression_time": 0.0,
+  "server_tray_priority": 0,
+  "server_tray_requires": "",
+  "abusive_buff": true,
+  "position_center": "kModTarget_Caster",
+  "position_distance": 0.0,
+  "position_height": 0.0,
+  "position_yaw": 0.0,
+  "face_target": true,
+  "attrib_cache": [
+    "Smashing_Dmg",
+    "Lethal_Dmg",
+    "Fire_Dmg",
+    "Cold_Dmg",
+    "Energy_Dmg",
+    "Negative_Energy_Dmg",
+    "Psionic_Dmg",
+    "Toxic_Dmg",
+    "ToHit"
+  ],
+  "max_targets_expression": "",
+  "chain_target_expr": "",
+  "powerset": "Blaster_Support.Fire_Manipulation",
+  "available_level": 15,
+  "archetypes": [
+    "blaster",
+    "boss_monster"
+  ],
+  "redirect": [
+
+  ],
+  "effects": [
+    {
+      "tags": [
+
+      ],
+      "chance": 1.0,
+      "ppm": 0.0,
+      "delay": 0.0,
+      "radius_inner": -1.0,
+      "radius_outer": -1.0,
+      "requires_expression": "",
+      "flags": [
+
+      ],
+      "eval_flags": 0,
+      "child_effects": [
+
+      ],
+      "templates": [
+        {
+          "attribs": [
+            "ToHit"
+          ],
+          "type": "Magnitude",
+          "application_type": "OnTick",
+          "aspect": "Current",
+          "target": "Self",
+          "table": "Melee_Buff_ToHit",
+          "scale": 2.0,
+          "duration": "10 seconds",
+          "magnitude": 1.0,
+          "delay": 0.0,
+          "duration_expression": "",
+          "magnitude_expression": "",
+          "application_period": 0.0,
+          "tick_chance": 1.0,
+          "jit_requires": "",
+          "caster_stack": "Individual",
+          "stack": "Stack",
+          "stack_limit": 2,
+          "stack_key": null,
+          "cancel_events": [
+
+          ],
+          "boost_mod_allowed": "Science_Boost",
+          "flags": [
+            "IgnoreResistance (5)",
+            "CombatModMagnitude (9)"
+          ],
+          "mode_name": null,
+          "target_info": null,
+          "messages": {
+            "display_attacker_hit": "You tap into your inner fire with your {PowerName} and are more deadly for a short while.",
+            "display_victim_hit": null,
+            "display_float": null,
+            "display_defense_float": null
+          },
+          "suppress_events": [
+
+          ],
+          "params": null,
+          "fx": null
+        },
+        {
+          "attribs": [
+            "Smashing_Dmg",
+            "Lethal_Dmg",
+            "Fire_Dmg",
+            "Cold_Dmg",
+            "Energy_Dmg",
+            "Negative_Energy_Dmg",
+            "Psionic_Dmg",
+            "Toxic_Dmg"
+          ],
+          "type": "Magnitude",
+          "application_type": "OnTick",
+          "aspect": "Strength",
+          "target": "Self",
+          "table": "Melee_Buff_Dmg",
+          "scale": 8.0,
+          "duration": "10 seconds",
+          "magnitude": 1.0,
+          "delay": 0.0,
+          "duration_expression": "",
+          "magnitude_expression": "",
+          "application_period": 0.0,
+          "tick_chance": 1.0,
+          "jit_requires": "",
+          "caster_stack": "Individual",
+          "stack": "Stack",
+          "stack_limit": 2,
+          "stack_key": null,
+          "cancel_events": [
+
+          ],
+          "boost_mod_allowed": "Science_Boost",
+          "flags": [
+            "IgnoreStrength (4)",
+            "IgnoreResistance (5)",
+            "CombatModMagnitude (9)"
+          ],
+          "mode_name": null,
+          "target_info": null,
+          "messages": null,
+          "suppress_events": [
+
+          ],
+          "params": null,
+          "fx": {
+            "continuing_bits": [
+
+            ],
+            "continuing_fx": "GENERICCONTINUING/BUFFDAMAGECONTINUING.FX",
+            "conditional_bits": [
+
+            ],
+            "conditional_fx": null
+          }
+        }
+      ],
+      "is_pvp": "EITHER"
+    }
+  ],
+  "activation_effects": [
+
+  ],
+  "fx": {
+    "source_file": "MENU/POWERS/ANIMFX/PLAYERPOWERS/BLASTERSUPPORT_FIREMANIPULATION_BUILDUP.PFX",
+    "attack_bits": [
+      245
+    ],
+    "block_bits": [
+
+    ],
+    "wind_up_bits": [
+
+    ],
+    "hit_bits": [
+
+    ],
+    "death_bits": [
+
+    ],
+    "activation_bits": [
+
+    ],
+    "deactivation_bits": [
+
+    ],
+    "initial_attack_bits": [
+      245
+    ],
+    "continuing_bits": [
+
+    ],
+    "conditional_bits": [
+
+    ],
+    "activation_fx": null,
+    "deactivation_fx": null,
+    "attack_fx": "POWERS/FIREMELEEFOLLOWUPHIT.FX",
+    "secondary_attack_fx": null,
+    "hit_fx": null,
+    "wind_up_fx": null,
+    "block_fx": null,
+    "death_fx": null,
+    "initial_attack_fx": "POWERS/FIREMELEEFOLLOWUPHIT.FX",
+    "continuing_fx": [
+
+    ],
+    "conditional_fx": [
+
+    ],
+    "mode_bits": [
+
+    ],
+    "frames_before_hit": 15,
+    "frames_before_secondary_hit": 0,
+    "delayed_hit": false,
+    "frames_attack": 35,
+    "initial_frames_before_hit": 15,
+    "initial_attack_fx_frame_delay": 0,
+    "projectile_speed": 3.4028234663852886e38,
+    "secondary_projectile_speed": 0.0,
+    "initial_frames_before_block": 0,
+    "ignore_attack_time_errors": null,
+    "frames_before_block": 0,
+    "fx_important": false
+  },
+  "custom_fx": [
+    {
+      "display_name": null,
+      "token": "Bright Fire",
+      "alt_themes": [
+        "Bright Fire 2"
+      ],
+      "category": null,
+      "palette_name": "Additive",
+      "fx": {
+        "source_file": "MENU/POWERS/ANIMFX/PLAYERPOWERS/BLASTERSUPPORT_FIREMANIPULATION_BUILDUP.PFX",
+        "attack_bits": [
+          245
+        ],
+        "block_bits": [
+
+        ],
+        "wind_up_bits": [
+
+        ],
+        "hit_bits": [
+
+        ],
+        "death_bits": [
+
+        ],
+        "activation_bits": [
+
+        ],
+        "deactivation_bits": [
+
+        ],
+        "initial_attack_bits": [
+          245
+        ],
+        "continuing_bits": [
+
+        ],
+        "conditional_bits": [
+
+        ],
+        "activation_fx": null,
+        "deactivation_fx": null,
+        "attack_fx": "CUSTOMIZEABLEPOWERS/FIREMANIPULATION/BUILDUP_ATTACK.FX",
+        "secondary_attack_fx": null,
+        "hit_fx": null,
+        "wind_up_fx": null,
+        "block_fx": null,
+        "death_fx": null,
+        "initial_attack_fx": "CUSTOMIZEABLEPOWERS/FIREMANIPULATION/BUILDUP_ATTACK.FX",
+        "continuing_fx": [
+
+        ],
+        "conditional_fx": [
+
+        ],
+        "mode_bits": [
+
+        ],
+        "frames_before_hit": 15,
+        "frames_before_secondary_hit": 0,
+        "delayed_hit": false,
+        "frames_attack": 35,
+        "initial_frames_before_hit": 15,
+        "initial_attack_fx_frame_delay": 0,
+        "projectile_speed": 3.4028234663852886e38,
+        "secondary_projectile_speed": 0.0,
+        "initial_frames_before_block": 0,
+        "ignore_attack_time_errors": null,
+        "frames_before_block": 0,
+        "fx_important": false
+      }
+    },
+    {
+      "display_name": null,
+      "token": "Dark Fire",
+      "alt_themes": [
+        "Dark Fire 2"
+      ],
+      "category": null,
+      "palette_name": "Subtractive",
+      "fx": {
+        "source_file": "MENU/POWERS/ANIMFX/PLAYERPOWERS/BLASTERSUPPORT_FIREMANIPULATION_BUILDUP.PFX",
+        "attack_bits": [
+          245
+        ],
+        "block_bits": [
+
+        ],
+        "wind_up_bits": [
+
+        ],
+        "hit_bits": [
+
+        ],
+        "death_bits": [
+
+        ],
+        "activation_bits": [
+
+        ],
+        "deactivation_bits": [
+
+        ],
+        "initial_attack_bits": [
+          245
+        ],
+        "continuing_bits": [
+
+        ],
+        "conditional_bits": [
+
+        ],
+        "activation_fx": null,
+        "deactivation_fx": null,
+        "attack_fx": "CUSTOMIZEABLEPOWERS/FIREMANIPULATION/SUBTRACTIVE/BUILDUP_ATTACK.FX",
+        "secondary_attack_fx": null,
+        "hit_fx": null,
+        "wind_up_fx": null,
+        "block_fx": null,
+        "death_fx": null,
+        "initial_attack_fx": "CUSTOMIZEABLEPOWERS/FIREMANIPULATION/SUBTRACTIVE/BUILDUP_ATTACK.FX",
+        "continuing_fx": [
+
+        ],
+        "conditional_fx": [
+
+        ],
+        "mode_bits": [
+
+        ],
+        "frames_before_hit": 15,
+        "frames_before_secondary_hit": 0,
+        "delayed_hit": false,
+        "frames_attack": 35,
+        "initial_frames_before_hit": 15,
+        "initial_attack_fx_frame_delay": 0,
+        "projectile_speed": 3.4028234663852886e38,
+        "secondary_projectile_speed": 0.0,
+        "initial_frames_before_block": 0,
+        "ignore_attack_time_errors": null,
+        "frames_before_block": 0,
+        "fx_important": false
+      }
+    }
+  ],
+  "fx_only_on_main_target": false
+}
