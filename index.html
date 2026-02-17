@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CoH DPS Attack Chain Calculator</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header>
+    <h1>CoH DPS Finder</h1>
+    <span class="subtitle">Attack Chain Optimizer for City of Heroes (Homecoming)</span>
+  </header>
+
+  <div class="app-layout">
+    <aside class="controls">
+      <div class="panel">
+        <h2>Configuration</h2>
+        <div class="control-group">
+          <label for="archetype-select">Archetype</label>
+          <select id="archetype-select">
+            <option value="blaster">Blaster</option>
+          </select>
+        </div>
+        <div class="control-group" style="margin-top: 0.5rem;">
+          <label for="powerset-select">Primary Powerset</label>
+          <select id="powerset-select">
+            <option value="fire_blast">Fire Blast</option>
+          </select>
+        </div>
+        <div class="control-group" style="margin-top: 0.5rem;">
+          <label for="level-input">Level</label>
+          <input type="number" id="level-input" class="level-input" value="50" min="1" max="50">
+        </div>
+        <div class="control-group" style="margin-top: 0.75rem;">
+          <label for="recharge-slider">Global Recharge Bonus</label>
+          <input type="range" id="recharge-slider" min="0" max="200" value="85" step="5">
+          <div class="recharge-value" id="recharge-display">85%</div>
+        </div>
+        <button class="run-btn" id="run-btn" style="margin-top: 0.75rem;">Find Optimal Chain</button>
+      </div>
+
+      <div class="panel">
+        <h2>Powers</h2>
+        <div id="power-list" class="power-list">
+          <div class="loading">Loading power data...</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="results-area" id="results-area">
+      <div class="panel">
+        <h2>Results</h2>
+        <div id="results-content">
+          <p class="loading">Configure settings and click "Find Optimal Chain" to begin.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
