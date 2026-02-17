@@ -79,6 +79,8 @@ async function parseSinglePower(slug, data, namedTables, levelIndex, archetype, 
   // A power is a "buff power" if it has damage buffs but deals no damage itself
   const isBuff = totalDamage === 0 && buffs.length > 0;
 
+  const isMelee = damageComponents.some(c => c.table && c.table.toLowerCase().includes('melee'));
+
   return {
     slug,
     name: data.display_name || data.name || slug,
@@ -94,6 +96,7 @@ async function parseSinglePower(slug, data, namedTables, levelIndex, archetype, 
     defiance,
     buffs,
     isBuff,
+    isMelee,
     isRedirected,
     availableLevel: data.available_level || 1,
   };
@@ -145,6 +148,7 @@ async function parseRainOfFire(slug, data, namedTables, levelIndex, archetype, p
     defiance,
     buffs,
     isBuff: false,
+    isMelee: false,
     isRedirected: false,
     isPetDamage: true,
     availableLevel: data.available_level || 1,

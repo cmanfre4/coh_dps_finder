@@ -142,21 +142,42 @@ export function renderPowerList(powers, container, buffPowers) {
   }
 }
 
-export function renderResults(chains, container) {
+export function renderResults({ rangedChains, hybridChains }, container) {
   container.innerHTML = '';
 
-  if (!chains || chains.length === 0) {
+  const hasRanged = rangedChains && rangedChains.length > 0;
+  const hasHybrid = hybridChains && hybridChains.length > 0;
+
+  if (!hasRanged && !hasHybrid) {
     container.innerHTML = '<p class="loading">No feasible chains found.</p>';
     return;
   }
+
+  if (hasRanged) {
+    renderChainSection(rangedChains, container, 'ranged', 'Ranged Chain');
+  }
+
+  if (hasHybrid) {
+    renderChainSection(hybridChains, container, 'hybrid', 'Melee / Hybrid Chain');
+  }
+}
+
+function renderChainSection(chains, container, sectionId, heading) {
+  const section = document.createElement('div');
+  section.className = 'results-section';
+
+  const h2 = document.createElement('h2');
+  h2.className = 'results-section-heading';
+  h2.textContent = heading;
+  section.appendChild(h2);
 
   // Best chain detail
   const best = chains[0];
   const detailDiv = document.createElement('div');
   detailDiv.className = 'chain-display';
-  detailDiv.id = 'chain-detail';
+  detailDiv.id = `chain-detail-${sectionId}`;
   detailDiv.innerHTML = renderChainDetail(best, 0);
-  container.appendChild(detailDiv);
+  section.appendChild(detailDiv);
 
   // Top chains list
   if (chains.length > 1) {
@@ -179,7 +200,7 @@ export function renderResults(chains, container) {
         </span>
       `;
       li.addEventListener('click', () => {
-        document.getElementById('chain-detail').innerHTML = renderChainDetail(chain, i);
+        document.getElementById(`chain-detail-${sectionId}`).innerHTML = renderChainDetail(chain, i);
         list.querySelectorAll('li').forEach(el => el.classList.remove('active'));
         li.classList.add('active');
       });
@@ -187,8 +208,10 @@ export function renderResults(chains, container) {
     });
 
     listPanel.appendChild(list);
-    container.appendChild(listPanel);
+    section.appendChild(listPanel);
   }
+
+  container.appendChild(section);
 }
 
 function renderChainDetail(chain, index) {

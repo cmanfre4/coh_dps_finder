@@ -131,14 +131,15 @@ async function runOptimizer() {
     const msg = e.data;
 
     if (msg.type === 'progress') {
+      const passPrefix = msg.pass ? `${msg.pass}: ` : '';
       const progressText = msg.skipped
-        ? `Chain length ${msg.length}: ${msg.reason}`
-        : `Chain length ${msg.length}: ${msg.checked?.toLocaleString() || 0} / ${msg.totalCombos?.toLocaleString() || '?'} checked${msg.bestDps ? ` (best: ${msg.bestDps.toFixed(1)} DPS)` : ''}`;
+        ? `${passPrefix}Chain length ${msg.length}: ${msg.reason}`
+        : `${passPrefix}Chain length ${msg.length}: ${msg.checked?.toLocaleString() || 0} / ${msg.totalCombos?.toLocaleString() || '?'} checked${msg.bestDps ? ` (best: ${msg.bestDps.toFixed(1)} DPS)` : ''}`;
       resultsContent.innerHTML = `<p class="loading">${progressText}</p>`;
     }
 
     if (msg.type === 'result') {
-      renderResults(msg.chains, resultsContent);
+      renderResults({ rangedChains: msg.rangedChains, hybridChains: msg.hybridChains }, resultsContent);
       runBtn.disabled = false;
       runBtn.textContent = 'Find Optimal Chain';
       worker.terminate();

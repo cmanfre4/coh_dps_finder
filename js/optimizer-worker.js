@@ -22,14 +22,22 @@ self.onmessage = function(e) {
   const { powers, buffPowers, rechargeReduction, activationLatency } = e.data;
 
   try {
-    const result = optimizeChains(powers, buffPowers || [], rechargeReduction, activationLatency || 0);
-    self.postMessage({ type: 'result', chains: result });
+    const rangedPowers = powers.filter(p => !p.isMelee);
+    const allPowers = powers;
+
+    self.postMessage({ type: 'pass', pass: 'ranged' });
+    const rangedChains = optimizeChains(rangedPowers, buffPowers || [], rechargeReduction, activationLatency || 0, 'Ranged');
+
+    self.postMessage({ type: 'pass', pass: 'hybrid' });
+    const hybridChains = optimizeChains(allPowers, buffPowers || [], rechargeReduction, activationLatency || 0, 'Hybrid');
+
+    self.postMessage({ type: 'result', rangedChains, hybridChains });
   } catch (err) {
     self.postMessage({ type: 'error', message: String(err && err.message || err) });
   }
 };
 
-function optimizeChains(powers, buffPowers, rechargeReduction, activationLatency) {
+function optimizeChains(powers, buffPowers, rechargeReduction, activationLatency, passLabel) {
   if (!powers || powers.length === 0) return [];
 
   const powersWithRecharge = powers.map(p => {
@@ -67,6 +75,7 @@ function optimizeChains(powers, buffPowers, rechargeReduction, activationLatency
     if (totalCombos > MAX_COMBOS_PER_LENGTH) {
       self.postMessage({
         type: 'progress',
+        pass: passLabel,
         length: len,
         skipped: true,
         reason: `${totalCombos.toLocaleString()} combos — skipped`,
@@ -76,12 +85,13 @@ function optimizeChains(powers, buffPowers, rechargeReduction, activationLatency
 
     self.postMessage({
       type: 'progress',
+      pass: passLabel,
       length: len,
       totalCombos,
       checked: 0,
     });
 
-    const lengthResult = searchChains(powersWithRecharge, len, totalCombos, maxDpa, globalBestDps);
+    const lengthResult = searchChains(powersWithRecharge, len, totalCombos, maxDpa, globalBestDps, passLabel);
     results.push(...lengthResult.chains);
 
     if (lengthResult.bestDps > globalBestDps) {
@@ -109,7 +119,7 @@ function optimizeChains(powers, buffPowers, rechargeReduction, activationLatency
   return topChains;
 }
 
-function searchChains(powers, length, totalCombos, maxDpa, globalBestDps) {
+function searchChains(powers, length, totalCombos, maxDpa, globalBestDps, passLabel) {
   const indices = new Array(length).fill(0);
   const numPowers = powers.length;
 
@@ -147,6 +157,7 @@ function searchChains(powers, length, totalCombos, maxDpa, globalBestDps) {
     if (checked % PROGRESS_INTERVAL === 0) {
       self.postMessage({
         type: 'progress',
+        pass: passLabel,
         length,
         totalCombos,
         checked,
