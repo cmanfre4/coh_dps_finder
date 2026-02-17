@@ -145,9 +145,10 @@ export function renderResults(chains, container) {
       const li = document.createElement('li');
       li.className = i === 0 ? 'active' : '';
       const label = chain.powers.map(p => p.name).join(' > ');
+      const displayDps = chain.buffedDps || chain.dps;
       li.innerHTML = `
         <span class="chain-label">${i + 1}. ${label}</span>
-        <span class="chain-dps">${chain.dps.toFixed(1)} DPS</span>
+        <span class="chain-dps">${displayDps.toFixed(1)} DPS</span>
       `;
       li.addEventListener('click', () => {
         document.getElementById('chain-detail').innerHTML = renderChainDetail(chain, i);
@@ -181,14 +182,35 @@ function renderChainDetail(chain, index) {
     </tr>
   `).join('');
 
+  // Buff overlay stats (Aim, Build Up, etc.)
+  const hasBuffOverlay = chain.buffedDps != null;
+  const buffStatsHtml = hasBuffOverlay ? `
+      <div class="stat-box buff-highlight">
+        <div class="stat-label">Buffed DPS</div>
+        <div class="stat-value dps">${chain.buffedDps.toFixed(1)}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">${(chain.buffPowerNames || ['Buff']).join(' + ')} Uptime</div>
+        <div class="stat-value">${(chain.buffUptime * 100).toFixed(1)}%</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Avg Buff Mult</div>
+        <div class="stat-value">${chain.avgBuffMult.toFixed(3)}x</div>
+      </div>` : '';
+
   return `
     <h3>${index === 0 ? 'Optimal' : `#${index + 1}`} Attack Chain</h3>
     <div class="chain-visual">${chainVisual}<span class="chain-arrow"> &circlearrowleft;</span></div>
     <div class="chain-stats">
+      ${hasBuffOverlay ? `
+      <div class="stat-box">
+        <div class="stat-label">Chain DPS</div>
+        <div class="stat-value">${chain.dps.toFixed(1)}</div>
+      </div>` : `
       <div class="stat-box">
         <div class="stat-label">DPS</div>
         <div class="stat-value dps">${chain.dps.toFixed(1)}</div>
-      </div>
+      </div>`}
       <div class="stat-box">
         <div class="stat-label">Cycle Time</div>
         <div class="stat-value">${chain.totalTime.toFixed(2)}s</div>
@@ -205,6 +227,7 @@ function renderChainDetail(chain, index) {
         <div class="stat-label">End/sec</div>
         <div class="stat-value">${chain.eps.toFixed(2)}</div>
       </div>
+      ${buffStatsHtml}
     </div>
     <table class="breakdown-table" style="margin-top: 1rem;">
       <thead>

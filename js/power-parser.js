@@ -10,19 +10,14 @@ const DAMAGE_ATTRIBS = new Set([
   'Energy_Dmg', 'Negative_Energy_Dmg', 'Psionic_Dmg', 'Toxic_Dmg'
 ]);
 
-// Powers to exclude from DPS chains (buffs, not damage)
-const EXCLUDED_POWERS = new Set(['aim']);
-
 export async function parsePowers(rawPowers, tables, archetype, powerset, level) {
   const levelIndex = level - 1;
   const namedTables = tables.named_tables;
   const powers = [];
 
   for (const [slug, data] of Object.entries(rawPowers)) {
-    if (EXCLUDED_POWERS.has(slug)) continue;
-
     const power = await parseSinglePower(slug, data, namedTables, levelIndex, archetype, powerset);
-    if (power && power.totalDamage > 0) {
+    if (power && (power.totalDamage > 0 || power.isBuff)) {
       powers.push(power);
     }
   }
@@ -60,10 +55,20 @@ async function parseSinglePower(slug, data, namedTables, levelIndex, archetype, 
   const damageComponents = extractDamage(damageData, namedTables, levelIndex);
   const totalDamage = damageComponents.reduce((sum, d) => sum + d.damage, 0);
 
-  // Extract Defiance buff from the original power data (not redirect)
-  const defiance = extractDefiance(data, namedTables, levelIndex);
+  // Extract all buff effects (Defiance from attacks, click buffs from Aim/Build Up)
+  const buffs = extractBuffs(data, namedTables, levelIndex);
+
+  // Backward-compat: populate defiance field from the first Defiance-style buff
+  // Defiance buffs use Ranged_Ones table (scale IS the percentage)
+  const defianceBuff = buffs.find(b => b.table.toLowerCase() === 'ranged_ones');
+  const defiance = defianceBuff
+    ? { scale: defianceBuff.resolvedScale, duration: defianceBuff.duration, stacking: defianceBuff.stacking }
+    : null;
 
   const at = arcanaTime(castTime);
+
+  // A power is a "buff power" if it has damage buffs but deals no damage itself
+  const isBuff = totalDamage === 0 && buffs.length > 0;
 
   return {
     slug,
@@ -78,6 +83,8 @@ async function parseSinglePower(slug, data, namedTables, levelIndex, archetype, 
     damageComponents,
     dpa: totalDamage / at,
     defiance,
+    buffs,
+    isBuff,
     isRedirected,
     availableLevel: data.available_level || 1,
   };
@@ -108,7 +115,11 @@ async function parseRainOfFire(slug, data, namedTables, levelIndex, archetype, p
     totalDamage = 0;
   }
 
-  const defiance = extractDefiance(data, namedTables, levelIndex);
+  const buffs = extractBuffs(data, namedTables, levelIndex);
+  const defianceBuff = buffs.find(b => b.table.toLowerCase() === 'ranged_ones');
+  const defiance = defianceBuff
+    ? { scale: defianceBuff.resolvedScale, duration: defianceBuff.duration, stacking: defianceBuff.stacking }
+    : null;
 
   return {
     slug,
@@ -123,15 +134,21 @@ async function parseRainOfFire(slug, data, namedTables, levelIndex, archetype, p
     damageComponents: [{ type: 'Fire', damage: totalDamage, source: 'pet' }],
     dpa: totalDamage / at,
     defiance,
+    buffs,
+    isBuff: false,
     isRedirected: false,
     isPetDamage: true,
     availableLevel: data.available_level || 1,
   };
 }
 
-// Extract Defiance self-damage buff from a power
-// Returns { scale, duration, stacking } or null if no buff
-function extractDefiance(powerData, namedTables, levelIndex) {
+// Extract all self-damage buff effects from a power.
+// Returns an array of buff objects. This covers both:
+// - Defiance buffs from attack powers (small scale, Ranged_Ones table)
+// - Click buffs like Aim/Build Up (large scale, Melee_Buff_Dmg table)
+function extractBuffs(powerData, namedTables, levelIndex) {
+  const buffs = [];
+
   for (const effect of (powerData.effects || [])) {
     if (effect.is_pvp === 'PVP') continue;
 
@@ -143,21 +160,35 @@ function extractDefiance(powerData, namedTables, levelIndex) {
       if (tpl.target !== 'Self') continue;
 
       const scale = tpl.scale || 0;
-      if (scale === 0) return null;
+      if (scale === 0) continue;
+
+      const table = tpl.table || '';
+      const tableKey = tableNameToKey(table);
+      const tableValues = namedTables[tableKey];
+
+      // Resolve the actual buff percentage: scale * abs(table[levelIndex])
+      // For Defiance (Ranged_Ones): table[49] = 1.0, so resolvedScale = scale
+      // For Aim (Melee_Buff_Dmg): table[49] = 0.125, so resolvedScale = scale * 0.125
+      const resolvedScale = tableValues
+        ? scale * Math.abs(tableValues[levelIndex])
+        : scale;
 
       // Parse duration
       const durationStr = tpl.duration || '0 seconds';
       const match = durationStr.match(/([\d.]+)\s*seconds?/);
       const duration = match ? parseFloat(match[1]) : 0;
 
-      return {
-        scale,       // damage buff percentage (e.g., 0.066 = 6.6%)
-        duration,    // how long the buff lasts
-        stacking: tpl.stack || 'Stack', // Stack or Replace
-      };
+      buffs.push({
+        attribute: attribs.find(a => DAMAGE_ATTRIBS.has(a)) || attribs[0],
+        scale,
+        resolvedScale,
+        duration,
+        stacking: tpl.stack || 'Stack',
+        table,
+      });
     }
   }
-  return null;
+  return buffs;
 }
 
 function extractDamage(powerData, namedTables, levelIndex) {

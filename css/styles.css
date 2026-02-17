@@ -460,6 +460,11 @@ input[type="range"]::-moz-range-thumb {
   text-shadow: 0 0 15px var(--highlight-glow);
 }
 
+.stat-box.buff-highlight {
+  border: 1px solid var(--highlight);
+  background: rgba(255, 200, 50, 0.08);
+}
+
 /* ---- Breakdown Table ---- */
 .breakdown-table {
   width: 100%;

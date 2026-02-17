@@ -14,18 +14,22 @@ const DPS_PRUNE_RATIO = 0.65;
 // Report progress every N combos
 const PROGRESS_INTERVAL = 50_000;
 
+// Buff overlay: skip first N buff cycles as warmup, measure the rest
+const BUFF_WARMUP_CYCLES = 2;
+const BUFF_MEASURE_CYCLES = 3;
+
 self.onmessage = function(e) {
-  const { powers, rechargeReduction, activationLatency } = e.data;
+  const { powers, buffPowers, rechargeReduction, activationLatency } = e.data;
 
   try {
-    const result = optimizeChains(powers, rechargeReduction, activationLatency || 0);
+    const result = optimizeChains(powers, buffPowers || [], rechargeReduction, activationLatency || 0);
     self.postMessage({ type: 'result', chains: result });
   } catch (err) {
     self.postMessage({ type: 'error', message: String(err && err.message || err) });
   }
 };
 
-function optimizeChains(powers, rechargeReduction, activationLatency) {
+function optimizeChains(powers, buffPowers, rechargeReduction, activationLatency) {
   if (!powers || powers.length === 0) return [];
 
   const powersWithRecharge = powers.map(p => {
@@ -35,6 +39,16 @@ function optimizeChains(powers, rechargeReduction, activationLatency) {
       effectiveRecharge: p.rechargeTime / (1 + enhRecharge / 100 + rechargeReduction / 100),
       // Activation latency adds dead time after each power activation
       // This models human reaction time, input delay, and animation queue gaps
+      activationLatency,
+    };
+  });
+
+  // Prepare buff powers with effective recharge
+  const preparedBuffs = buffPowers.map(p => {
+    const enhRecharge = p.enhRecharge || 0;
+    return {
+      ...p,
+      effectiveRecharge: p.rechargeTime / (1 + enhRecharge / 100 + rechargeReduction / 100),
       activationLatency,
     };
   });
@@ -77,8 +91,22 @@ function optimizeChains(powers, rechargeReduction, activationLatency) {
 
   results.sort((a, b) => b.dps - a.dps);
   const unique = deduplicateChains(results);
-  // Rotate each chain to start from highest DPA power for readable display
-  return unique.slice(0, TOP_N).map(rotateChainToHighestDpa);
+  const topChains = unique.slice(0, TOP_N).map(rotateChainToHighestDpa);
+
+  // Apply buff overlay to top chains if there are buff powers
+  if (preparedBuffs.length > 0) {
+    for (const chain of topChains) {
+      const overlay = simulateChainWithBuffOverlay(chain, preparedBuffs, activationLatency);
+      chain.buffedDps = overlay.dpsWithBuffs;
+      chain.buffUptime = overlay.buffUptime;
+      chain.avgBuffMult = overlay.avgBuffMult;
+      chain.buffPowerNames = preparedBuffs.map(p => p.name);
+    }
+    // Re-sort by buffed DPS
+    topChains.sort((a, b) => (b.buffedDps || b.dps) - (a.buffedDps || a.dps));
+  }
+
+  return topChains;
 }
 
 function searchChains(powers, length, totalCombos, maxDpa, globalBestDps) {
@@ -147,6 +175,7 @@ function searchChains(powers, length, totalCombos, maxDpa, globalBestDps) {
         dpa: simResult.perPowerDamage[i] / p.arcanaTime,
         effectArea: p.effectArea,
         defianceBuff: simResult.perPowerDefianceMult[i],
+        defiance: p.defiance,
       })),
       totalDamage: simResult.totalDamage,
       totalTime: simResult.totalTime,
@@ -242,6 +271,141 @@ function simulateChainWithDefiance(chain) {
     perPowerDamage: measureDamage,
     perPowerDefianceMult: measureDefianceMult,
     avgDefianceMult: avgMult,
+  };
+}
+
+// Buff Overlay: simulate the attack chain over a long period with buff powers
+// (Aim, Build Up) fired on cooldown, interrupting the chain.
+// Tracks both Defiance and click buffs together for accurate interaction.
+function simulateChainWithBuffOverlay(chainResult, buffPowers, activationLatency) {
+  if (!buffPowers || buffPowers.length === 0) {
+    return { dpsWithBuffs: chainResult.dps, buffUptime: 0, avgBuffMult: 1.0 };
+  }
+
+  const chainPowers = chainResult.powers;
+  const chainLength = chainPowers.length;
+
+  // Find the longest buff effective recharge to determine simulation length
+  const maxBuffRecharge = Math.max(...buffPowers.map(p => p.effectiveRecharge));
+  const totalBuffCycles = BUFF_WARMUP_CYCLES + BUFF_MEASURE_CYCLES;
+  const simDuration = maxBuffRecharge * totalBuffCycles;
+  const measureStartTime = maxBuffRecharge * BUFF_WARMUP_CYCLES;
+
+  // Build buff power info with resolved buff data
+  const buffInfos = buffPowers.map(p => {
+    // Find the click damage buff (not Defiance — exclude Ranged_Ones table)
+    const dmgBuff = (p.buffs || []).find(b =>
+      b.table.toLowerCase() !== 'ranged_ones'
+    ) || (p.buffs || [])[0];
+
+    return {
+      slug: p.slug,
+      name: p.name,
+      arcanaTime: p.arcanaTime,
+      effectiveRecharge: p.effectiveRecharge,
+      buffScale: dmgBuff ? dmgBuff.resolvedScale : 0,
+      buffDuration: dmgBuff ? dmgBuff.duration : 0,
+      buffStacking: dmgBuff ? dmgBuff.stacking : 'Stack',
+    };
+  });
+
+  let currentTime = 0;
+  let chainIndex = 0;
+  let defianceBuffs = []; // Defiance buffs from attacks
+  let clickBuffs = []; // Click buffs from Aim/Build Up
+  const buffCooldowns = {}; // slug -> readyAt
+  const attackCooldowns = {}; // slug -> readyAt
+
+  // Measurement accumulators
+  let measureDamage = 0;
+  let measureStartActual = -1;
+  let clickBuffActiveTime = 0;
+
+  for (const buff of buffInfos) {
+    buffCooldowns[buff.slug] = 0;
+  }
+
+  while (currentTime < simDuration) {
+    const isMeasuring = currentTime >= measureStartTime;
+    if (isMeasuring && measureStartActual < 0) {
+      measureStartActual = currentTime;
+    }
+
+    // Fire any ready buff powers before the next attack
+    for (const buff of buffInfos) {
+      if (buffCooldowns[buff.slug] <= currentTime && buff.buffScale > 0) {
+        const buffTime = buff.arcanaTime + (activationLatency || 0);
+        currentTime += buffTime;
+
+        // Apply the click buff
+        if (buff.buffStacking === 'Replace') {
+          clickBuffs = clickBuffs.filter(b => b.slug !== buff.slug);
+        }
+        clickBuffs.push({
+          slug: buff.slug,
+          scale: buff.buffScale,
+          expiresAt: currentTime + buff.buffDuration,
+        });
+
+        buffCooldowns[buff.slug] = currentTime + buff.effectiveRecharge;
+      }
+    }
+
+    // Fire next attack in chain
+    const power = chainPowers[chainIndex % chainLength];
+    chainIndex++;
+
+    // Wait for cooldown
+    const readyAt = attackCooldowns[power.slug] || 0;
+    if (readyAt > currentTime) {
+      currentTime = readyAt;
+    }
+
+    // Remove expired buffs
+    defianceBuffs = defianceBuffs.filter(b => b.expiresAt > currentTime);
+    clickBuffs = clickBuffs.filter(b => b.expiresAt > currentTime);
+
+    // Calculate total multiplier: Defiance + click buffs (additive)
+    const defianceBonus = defianceBuffs.reduce((sum, b) => sum + b.scale, 0);
+    const clickBuffBonus = clickBuffs.reduce((sum, b) => sum + b.scale, 0);
+    const totalMult = 1 + defianceBonus + clickBuffBonus;
+
+    const effectiveDamage = power.baseDamage * totalMult;
+    const attackTime = power.arcanaTime + (activationLatency || 0);
+
+    if (isMeasuring) {
+      measureDamage += effectiveDamage;
+      if (clickBuffBonus > 0) clickBuffActiveTime += attackTime;
+    }
+
+    // Apply this power's Defiance buff
+    if (power.defiance && power.defiance.scale > 0) {
+      if (power.defiance.stacking === 'Replace') {
+        defianceBuffs = defianceBuffs.filter(b => b.slug !== power.slug);
+      }
+      defianceBuffs.push({
+        slug: power.slug,
+        scale: power.defiance.scale,
+        expiresAt: currentTime + power.defiance.duration,
+      });
+    }
+
+    attackCooldowns[power.slug] = currentTime + power.effectiveRecharge;
+    currentTime += attackTime;
+  }
+
+  const totalMeasureTime = currentTime - (measureStartActual >= 0 ? measureStartActual : measureStartTime);
+  const dpsWithBuffs = totalMeasureTime > 0 ? measureDamage / totalMeasureTime : chainResult.dps;
+  const buffUptime = totalMeasureTime > 0 ? clickBuffActiveTime / totalMeasureTime : 0;
+
+  // Average click buff multiplier during measurement
+  const totalClickScale = buffInfos.reduce((sum, b) => sum + b.buffScale, 0);
+  const avgBuffMult = 1 + totalClickScale * buffUptime;
+
+  return {
+    dpsWithBuffs,
+    buffUptime,
+    avgBuffMult,
   };
 }
 

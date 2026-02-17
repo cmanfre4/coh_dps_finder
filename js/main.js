@@ -53,13 +53,20 @@ async function init() {
       state.rawPowers, state.tables, state.archetype, state.powerset, state.level
     );
 
-    renderPowerList(state.parsedPowers, document.getElementById('power-list'));
+    renderPowerList(state.parsedPowers.filter(p => !p.isBuff), document.getElementById('power-list'));
 
     // Validate Flares damage
     const flares = state.parsedPowers.find(p => p.slug === 'flares');
     if (flares) {
       console.log(`Flares L${state.level} damage: ${flares.totalDamage.toFixed(2)} (expected ~63.19)`);
       console.log(`Flares ArcanaTime: ${flares.arcanaTime.toFixed(3)}s (expected 1.188s)`);
+    }
+
+    // Validate Aim buff parsing
+    const aim = state.parsedPowers.find(p => p.slug === 'aim');
+    if (aim) {
+      const dmgBuff = (aim.buffs || []).find(b => b.table.toLowerCase() !== 'ranged_ones');
+      console.log(`Aim isBuff: ${aim.isBuff}, buffs: ${aim.buffs.length}, dmg buff: +${dmgBuff ? (dmgBuff.resolvedScale * 100).toFixed(1) : '?'}% (expected +62.5%)`);
     }
   } catch (err) {
     console.error('Failed to load data:', err);
@@ -85,7 +92,11 @@ async function runOptimizer() {
   const enhConfig = getEnhancementConfigFromUI();
   const enhancedPowers = state.parsedPowers.map(p => applyEnhancements(p, enhConfig));
 
-  renderPowerList(enhancedPowers, document.getElementById('power-list'));
+  // Separate attack powers (deal damage) from buff powers (Aim, Build Up, etc.)
+  const attackPowers = enhancedPowers.filter(p => !p.isBuff);
+  const buffPowers = enhancedPowers.filter(p => p.isBuff);
+
+  renderPowerList(attackPowers, document.getElementById('power-list'));
 
   // Terminate any existing worker
   if (state.worker) {
@@ -141,7 +152,8 @@ async function runOptimizer() {
 
   // Send powers data to worker (serializable plain objects)
   worker.postMessage({
-    powers: enhancedPowers,
+    powers: attackPowers,
+    buffPowers,
     rechargeReduction: state.rechargeBonus,
     activationLatency: latencySec,
   });

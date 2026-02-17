@@ -45,9 +45,17 @@ export function applyEnhancements(power, slotConfig) {
   const config = (slotConfig.perPower && slotConfig.perPower[power.slug])
     || slotConfig.global;
 
-  const dmgEnhPercent = effectiveEnhancement(config.damage || 0);
   const rechEnhPercent = effectiveEnhancement(config.recharge || 0);
 
+  // Buff powers (like Aim) don't deal damage — only apply recharge enhancements
+  if (power.isBuff) {
+    return {
+      ...power,
+      enhRecharge: rechEnhPercent,
+    };
+  }
+
+  const dmgEnhPercent = effectiveEnhancement(config.damage || 0);
   const dmgMult = 1 + dmgEnhPercent / 100;
   const enhancedDamage = power.totalDamage * dmgMult;
 
