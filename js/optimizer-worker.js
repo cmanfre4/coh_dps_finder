@@ -74,7 +74,8 @@ function optimizeChains(powers, rechargeReduction) {
 
   results.sort((a, b) => b.dps - a.dps);
   const unique = deduplicateChains(results);
-  return unique.slice(0, TOP_N);
+  // Rotate each chain to start from highest DPA power for readable display
+  return unique.slice(0, TOP_N).map(rotateChainToHighestDpa);
 }
 
 function searchChains(powers, length, totalCombos, maxDpa, globalBestDps) {
@@ -319,4 +320,28 @@ function normalizeChainKey(slugs) {
     if (rotation < best) best = rotation;
   }
   return best;
+}
+
+// Rotate a chain result so it starts from the highest DPA power.
+// Since it's a repeating cycle, rotation doesn't change DPS —
+// this just makes the display read naturally (best attack first).
+function rotateChainToHighestDpa(chain) {
+  const powers = chain.powers;
+  if (powers.length <= 1) return chain;
+
+  // Find index of highest DPA power
+  let bestIdx = 0;
+  let bestDpa = powers[0].dpa;
+  for (let i = 1; i < powers.length; i++) {
+    if (powers[i].dpa > bestDpa) {
+      bestDpa = powers[i].dpa;
+      bestIdx = i;
+    }
+  }
+
+  if (bestIdx === 0) return chain;
+
+  // Rotate powers array
+  const rotated = powers.slice(bestIdx).concat(powers.slice(0, bestIdx));
+  return { ...chain, powers: rotated };
 }
