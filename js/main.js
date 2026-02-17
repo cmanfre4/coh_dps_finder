@@ -23,9 +23,16 @@ async function init() {
   const runBtn = document.getElementById('run-btn');
   const levelInput = document.getElementById('level-input');
 
+  const latencySlider = document.getElementById('latency-slider');
+  const latencyDisplay = document.getElementById('latency-display');
+
   rechargeSlider.addEventListener('input', () => {
     state.rechargeBonus = parseInt(rechargeSlider.value, 10);
     rechargeDisplay.textContent = `${state.rechargeBonus}%`;
+  });
+
+  latencySlider.addEventListener('input', () => {
+    latencyDisplay.textContent = `${latencySlider.value}ms`;
   });
 
   levelInput.addEventListener('change', () => {
@@ -128,10 +135,15 @@ async function runOptimizer() {
     state.worker = null;
   };
 
+  // Read activation latency (ms -> seconds)
+  const latencyMs = parseInt(document.getElementById('latency-slider').value, 10) || 0;
+  const latencySec = latencyMs / 1000;
+
   // Send powers data to worker (serializable plain objects)
   worker.postMessage({
     powers: enhancedPowers,
     rechargeReduction: state.rechargeBonus,
+    activationLatency: latencySec,
   });
 }
 

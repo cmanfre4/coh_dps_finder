@@ -15,17 +15,17 @@ const DPS_PRUNE_RATIO = 0.65;
 const PROGRESS_INTERVAL = 50_000;
 
 self.onmessage = function(e) {
-  const { powers, rechargeReduction } = e.data;
+  const { powers, rechargeReduction, activationLatency } = e.data;
 
   try {
-    const result = optimizeChains(powers, rechargeReduction);
+    const result = optimizeChains(powers, rechargeReduction, activationLatency || 0);
     self.postMessage({ type: 'result', chains: result });
   } catch (err) {
     self.postMessage({ type: 'error', message: String(err && err.message || err) });
   }
 };
 
-function optimizeChains(powers, rechargeReduction) {
+function optimizeChains(powers, rechargeReduction, activationLatency) {
   if (!powers || powers.length === 0) return [];
 
   const powersWithRecharge = powers.map(p => {
@@ -33,6 +33,9 @@ function optimizeChains(powers, rechargeReduction) {
     return {
       ...p,
       effectiveRecharge: p.rechargeTime / (1 + enhRecharge / 100 + rechargeReduction / 100),
+      // Activation latency adds dead time after each power activation
+      // This models human reaction time, input delay, and animation queue gaps
+      activationLatency,
     };
   });
 
@@ -224,7 +227,7 @@ function simulateChainWithDefiance(chain) {
       }
 
       cooldowns[power.slug] = currentTime + power.effectiveRecharge;
-      currentTime += power.arcanaTime;
+      currentTime += power.arcanaTime + (power.activationLatency || 0);
     }
   }
 
@@ -243,7 +246,8 @@ function simulateChainWithDefiance(chain) {
 }
 
 function isChainFeasible(chain) {
-  const totalTime = chain.reduce((sum, p) => sum + p.arcanaTime, 0);
+  const latency = chain[0]?.activationLatency || 0;
+  const totalTime = chain.reduce((sum, p) => sum + p.arcanaTime + latency, 0);
 
   const usagesBySlug = {};
   let timePos = 0;
@@ -254,7 +258,7 @@ function isChainFeasible(chain) {
       time: timePos,
       recharge: chain[i].effectiveRecharge,
     });
-    timePos += chain[i].arcanaTime;
+    timePos += chain[i].arcanaTime + latency;
   }
 
   for (const [slug, usages] of Object.entries(usagesBySlug)) {
@@ -277,7 +281,8 @@ function isChainFeasible(chain) {
 }
 
 function isChainWorthSimulating(chain) {
-  const castTime = chain.reduce((sum, p) => sum + p.arcanaTime, 0);
+  const latency = chain[0]?.activationLatency || 0;
+  const castTime = chain.reduce((sum, p) => sum + p.arcanaTime + latency, 0);
 
   const counts = {};
   for (const p of chain) {
