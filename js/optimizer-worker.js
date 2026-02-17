@@ -34,19 +34,18 @@ self.onmessage = function(e) {
     let aoeChains = null;
     const nt = numTargets || 1;
     if (nt > 1) {
-      // Only include powers that hit multiple targets for AoE chains
-      const aoePowers = allPowers
-        .filter(p => (p.maxTargetsHit || 1) > 1)
-        .map(p => {
-          const targetsHit = Math.min(nt, p.maxTargetsHit);
-          return {
-            ...p,
-            totalDamage: p.totalDamage * targetsHit,
-            dpa: (p.totalDamage * targetsHit) / p.arcanaTime,
-            _aoeDamageMultiplier: targetsHit,
-            _originalDamage: p.totalDamage,
-          };
-        });
+      // Scale each power's damage by targets hit: min(numTargets, maxTargetsHit)
+      // ST powers get 1x (valid fillers between AoE cooldowns), AoE powers get Nx
+      const aoePowers = allPowers.map(p => {
+        const targetsHit = Math.min(nt, p.maxTargetsHit || 1);
+        return {
+          ...p,
+          totalDamage: p.totalDamage * targetsHit,
+          dpa: (p.totalDamage * targetsHit) / p.arcanaTime,
+          _aoeDamageMultiplier: targetsHit,
+          _originalDamage: p.totalDamage,
+        };
+      });
 
       self.postMessage({ type: 'pass', pass: `AoE (${nt}t)` });
       aoeChains = optimizeChains(aoePowers, buffPowers || [], rechargeReduction, activationLatency || 0, `AoE (${nt}t)`, 10);
