@@ -123,7 +123,7 @@ function optimizeChains(powers, buffPowers, rechargeReduction, activationLatency
       checked: 0,
     });
 
-    const lengthResult = searchChains(powersWithRecharge, len, totalCombos, maxDpa, globalBestDps, passLabel);
+    const lengthResult = searchChains(powersWithRecharge, len, totalCombos, maxDpa, globalBestDps, passLabel, topN);
     results.push(...lengthResult.chains);
 
     if (lengthResult.bestDps > globalBestDps) {
@@ -151,7 +151,7 @@ function optimizeChains(powers, buffPowers, rechargeReduction, activationLatency
   return topChains;
 }
 
-function searchChains(powers, length, totalCombos, maxDpa, globalBestDps, passLabel) {
+function searchChains(powers, length, totalCombos, maxDpa, globalBestDps, passLabel, topN) {
   const indices = new Array(length).fill(0);
   const numPowers = powers.length;
 
@@ -198,7 +198,7 @@ function searchChains(powers, length, totalCombos, maxDpa, globalBestDps, passLa
     }
 
     // Skip if clearly not competitive
-    if (simResult.dps < bestDpsThisLength * DPS_PRUNE_RATIO && lengthResults.length >= TOP_N) continue;
+    if (simResult.dps < bestDpsThisLength * DPS_PRUNE_RATIO && lengthResults.length >= topN) continue;
 
     if (simResult.dps > bestDpsThisLength) {
       bestDpsThisLength = simResult.dps;
