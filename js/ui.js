@@ -84,6 +84,7 @@ function renderChainDetail(chain, index) {
       <td class="num">${p.arcanaTime.toFixed(3)}s</td>
       <td class="num">${p.effectiveRecharge.toFixed(1)}s</td>
       <td class="num">${p.dpa.toFixed(1)}</td>
+      <td class="num">${p.defianceBuff ? `+${((p.defianceBuff - 1) * 100).toFixed(1)}%` : '-'}</td>
       <td class="num">${p.enduranceCost.toFixed(1)}</td>
       <td>${p.effectArea === 'SingleTarget' ? 'ST' : p.effectArea}</td>
     </tr>
@@ -106,6 +107,10 @@ function renderChainDetail(chain, index) {
         <div class="stat-value">${chain.totalDamage.toFixed(1)}</div>
       </div>
       <div class="stat-box">
+        <div class="stat-label">Avg Defiance</div>
+        <div class="stat-value">${chain.avgDefianceBuff ? `+${((chain.avgDefianceBuff - 1) * 100).toFixed(1)}%` : '0%'}</div>
+      </div>
+      <div class="stat-box">
         <div class="stat-label">End/sec</div>
         <div class="stat-value">${chain.eps.toFixed(2)}</div>
       </div>
@@ -119,6 +124,7 @@ function renderChainDetail(chain, index) {
           <th>Arcana</th>
           <th>Eff. Rech</th>
           <th>DPA</th>
+          <th>Defiance</th>
           <th>End</th>
           <th>Area</th>
         </tr>

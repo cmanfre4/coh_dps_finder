@@ -1,15 +1,17 @@
 // Attack chain optimizer: finds the highest DPS repeating chain
 // Supports greedy and exhaustive search up to chain length 8
+// Models Defiance (Blaster inherent) damage buff stacking
 
 import { arcanaTime } from './arcanatime.js';
 
 const MAX_CHAIN_LENGTH = 8;
 const TOP_N = 5;
+// Number of full cycles to simulate for Defiance to reach steady state
+const DEFIANCE_WARMUP_CYCLES = 3;
 
 export function optimizeChains(powers, rechargeReduction) {
   if (!powers || powers.length === 0) return [];
 
-  // Calculate effective recharge for each power
   const powersWithRecharge = powers.map(p => ({
     ...p,
     effectiveRecharge: p.rechargeTime / (1 + rechargeReduction / 100),
@@ -17,15 +19,12 @@ export function optimizeChains(powers, rechargeReduction) {
 
   const results = [];
 
-  // Exhaustive search for chains of length 1 to MAX_CHAIN_LENGTH
   for (let len = 1; len <= Math.min(MAX_CHAIN_LENGTH, 8); len++) {
     searchChains(powersWithRecharge, len, results);
   }
 
-  // Sort by DPS descending and return top N
   results.sort((a, b) => b.dps - a.dps);
 
-  // Deduplicate chains that are rotations of each other
   const unique = deduplicateChains(results);
   return unique.slice(0, TOP_N);
 }
@@ -36,7 +35,6 @@ function searchChains(powers, length, results) {
   const totalCombos = Math.pow(numPowers, length);
 
   for (let combo = 0; combo < totalCombos; combo++) {
-    // Decode combo into power indices
     let temp = combo;
     for (let i = length - 1; i >= 0; i--) {
       indices[i] = temp % numPowers;
@@ -45,45 +43,115 @@ function searchChains(powers, length, results) {
 
     const chain = indices.map(i => powers[i]);
 
-    // Check feasibility: each power must be off cooldown when needed
     if (!isChainFeasible(chain)) continue;
 
-    // Calculate DPS
-    const totalDamage = chain.reduce((sum, p) => sum + p.totalDamage, 0);
-    const totalTime = chain.reduce((sum, p) => sum + p.arcanaTime, 0);
-    const dps = totalDamage / totalTime;
-    const eps = chain.reduce((sum, p) => sum + p.enduranceCost, 0) / totalTime;
+    // Simulate with Defiance buffs for accurate DPS
+    const simResult = simulateChainWithDefiance(chain);
 
     results.push({
-      powers: chain.map(p => ({
+      powers: chain.map((p, i) => ({
         slug: p.slug,
         name: p.name,
-        damage: p.totalDamage,
+        damage: simResult.perPowerDamage[i],
+        baseDamage: p.totalDamage,
         arcanaTime: p.arcanaTime,
         castTime: p.castTime,
         rechargeTime: p.rechargeTime,
         effectiveRecharge: p.effectiveRecharge,
         enduranceCost: p.enduranceCost,
-        dpa: p.dpa,
+        dpa: simResult.perPowerDamage[i] / p.arcanaTime,
         effectArea: p.effectArea,
+        defianceBuff: simResult.perPowerDefianceMult[i],
       })),
-      totalDamage,
-      totalTime,
-      dps,
-      eps,
+      totalDamage: simResult.totalDamage,
+      totalTime: simResult.totalTime,
+      dps: simResult.dps,
+      eps: chain.reduce((sum, p) => sum + p.enduranceCost, 0) / simResult.totalTime,
       length,
+      avgDefianceBuff: simResult.avgDefianceMult,
     });
   }
 }
 
+// Simulate a repeating chain with Defiance buff tracking.
+// Runs several cycles to let buffs reach steady state, then measures the last cycle.
+function simulateChainWithDefiance(chain) {
+  const cycleTime = chain.reduce((sum, p) => sum + p.arcanaTime, 0);
+  const totalCycles = DEFIANCE_WARMUP_CYCLES + 1; // warmup + 1 measurement cycle
+
+  // Active Defiance buffs: [{slug, scale, expiresAt, stacking}]
+  let activeBuffs = [];
+  let currentTime = 0;
+
+  // Per-power results for the measurement cycle
+  let measureDamage = [];
+  let measureDefianceMult = [];
+
+  for (let cycle = 0; cycle < totalCycles; cycle++) {
+    const isMeasureCycle = cycle === totalCycles - 1;
+    if (isMeasureCycle) {
+      measureDamage = [];
+      measureDefianceMult = [];
+    }
+
+    for (let i = 0; i < chain.length; i++) {
+      const power = chain[i];
+
+      // Remove expired buffs
+      activeBuffs = activeBuffs.filter(b => b.expiresAt > currentTime);
+
+      // Calculate current Defiance damage multiplier
+      const defianceBonus = activeBuffs.reduce((sum, b) => sum + b.scale, 0);
+      const defianceMult = 1 + defianceBonus;
+
+      // Apply Defiance to this power's damage
+      const effectiveDamage = power.totalDamage * defianceMult;
+
+      if (isMeasureCycle) {
+        measureDamage.push(effectiveDamage);
+        measureDefianceMult.push(defianceMult);
+      }
+
+      // Apply this power's Defiance buff (if any)
+      if (power.defiance && power.defiance.scale > 0) {
+        const newBuff = {
+          slug: power.slug,
+          scale: power.defiance.scale,
+          expiresAt: currentTime + power.defiance.duration,
+          stacking: power.defiance.stacking,
+        };
+
+        if (power.defiance.stacking === 'Replace') {
+          // Remove existing buffs from same power, add new one
+          activeBuffs = activeBuffs.filter(b => b.slug !== power.slug);
+          activeBuffs.push(newBuff);
+        } else {
+          // Stack: just add
+          activeBuffs.push(newBuff);
+        }
+      }
+
+      currentTime += power.arcanaTime;
+    }
+  }
+
+  const totalDamage = measureDamage.reduce((sum, d) => sum + d, 0);
+  const totalTime = cycleTime;
+  const avgMult = measureDefianceMult.reduce((sum, m) => sum + m, 0) / measureDefianceMult.length;
+
+  return {
+    totalDamage,
+    totalTime,
+    dps: totalDamage / totalTime,
+    perPowerDamage: measureDamage,
+    perPowerDefianceMult: measureDefianceMult,
+    avgDefianceMult: avgMult,
+  };
+}
+
 function isChainFeasible(chain) {
-  // For a repeating chain, check that each power has enough time
-  // to recharge before it's needed again.
-  // Track the time position of each power usage.
   const totalTime = chain.reduce((sum, p) => sum + p.arcanaTime, 0);
 
-  // For each power, find all positions where it appears and check
-  // that the gap between consecutive uses >= effectiveRecharge.
   const usagesBySlug = {};
   let timePos = 0;
   for (let i = 0; i < chain.length; i++) {
@@ -92,26 +160,20 @@ function isChainFeasible(chain) {
     usagesBySlug[slug].push({
       time: timePos,
       recharge: chain[i].effectiveRecharge,
-      arcanaTime: chain[i].arcanaTime,
     });
     timePos += chain[i].arcanaTime;
   }
 
   for (const [slug, usages] of Object.entries(usagesBySlug)) {
     for (let i = 0; i < usages.length; i++) {
-      // Time until next use of the same power (wrapping around the cycle)
       const nextIdx = (i + 1) % usages.length;
       let gap;
       if (nextIdx > i) {
         gap = usages[nextIdx].time - usages[i].time;
       } else {
-        // Wraps around: time to end of cycle + time to next use in next cycle
         gap = (totalTime - usages[i].time) + usages[nextIdx].time;
       }
 
-      // The power starts recharging after its cast begins (at its time position)
-      // It needs to be ready by the next time it's used
-      // Recharge starts at time of activation
       if (gap < usages[i].recharge - 0.001) {
         return false;
       }
@@ -137,8 +199,6 @@ function deduplicateChains(chains) {
 }
 
 function normalizeChainKey(slugs) {
-  // A chain is a cycle, so [A, B, C] == [B, C, A] == [C, A, B]
-  // Find the lexicographically smallest rotation
   const doubled = slugs.concat(slugs);
   let best = slugs.join(',');
   for (let i = 1; i < slugs.length; i++) {
@@ -157,16 +217,16 @@ export function greedyChain(powers, rechargeReduction, maxLength = 20) {
     effectiveRecharge: p.rechargeTime / (1 + rechargeReduction / 100),
   }));
 
-  // Sort by DPA descending for initial priority
   const byDpa = [...powersWithRecharge].sort((a, b) => b.dpa - a.dpa);
 
   const chain = [];
-  const cooldowns = {}; // slug -> time until available
+  const cooldowns = {};
+  let activeBuffs = [];
+  let currentTime = 0;
   let totalDamage = 0;
   let totalTime = 0;
 
   for (let step = 0; step < maxLength; step++) {
-    // Find the best available power (highest DPA that's off cooldown)
     let best = null;
     for (const p of byDpa) {
       const cd = cooldowns[p.slug] || 0;
@@ -176,33 +236,54 @@ export function greedyChain(powers, rechargeReduction, maxLength = 20) {
       }
     }
 
-    if (!best) break; // No powers available (shouldn't happen with Flares-like power)
+    if (!best) break;
 
-    chain.push(best);
-    totalDamage += best.totalDamage;
+    // Remove expired buffs and calculate multiplier
+    activeBuffs = activeBuffs.filter(b => b.expiresAt > currentTime);
+    const defianceBonus = activeBuffs.reduce((sum, b) => sum + b.scale, 0);
+    const defianceMult = 1 + defianceBonus;
+
+    const effectiveDamage = best.totalDamage * defianceMult;
+
+    chain.push({ ...best, effectiveDamage, defianceMult });
+    totalDamage += effectiveDamage;
     totalTime += best.arcanaTime;
 
-    // Put this power on cooldown
-    cooldowns[best.slug] = best.effectiveRecharge;
+    // Apply Defiance buff
+    if (best.defiance && best.defiance.scale > 0) {
+      const newBuff = {
+        slug: best.slug,
+        scale: best.defiance.scale,
+        expiresAt: currentTime + best.defiance.duration,
+        stacking: best.defiance.stacking,
+      };
+      if (best.defiance.stacking === 'Replace') {
+        activeBuffs = activeBuffs.filter(b => b.slug !== best.slug);
+      }
+      activeBuffs.push(newBuff);
+    }
 
-    // Reduce all cooldowns by the time this power takes
+    cooldowns[best.slug] = best.effectiveRecharge;
     for (const slug of Object.keys(cooldowns)) {
       cooldowns[slug] -= best.arcanaTime;
     }
+    currentTime += best.arcanaTime;
   }
 
   return {
     powers: chain.map(p => ({
       slug: p.slug,
       name: p.name,
-      damage: p.totalDamage,
+      damage: p.effectiveDamage,
+      baseDamage: p.totalDamage,
       arcanaTime: p.arcanaTime,
       castTime: p.castTime,
       rechargeTime: p.rechargeTime,
       effectiveRecharge: p.effectiveRecharge,
       enduranceCost: p.enduranceCost,
-      dpa: p.dpa,
+      dpa: p.effectiveDamage / p.arcanaTime,
       effectArea: p.effectArea,
+      defianceBuff: p.defianceMult,
     })),
     totalDamage,
     totalTime,

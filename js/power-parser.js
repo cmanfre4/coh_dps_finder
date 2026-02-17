@@ -60,6 +60,9 @@ async function parseSinglePower(slug, data, namedTables, levelIndex, archetype, 
   const damageComponents = extractDamage(damageData, namedTables, levelIndex);
   const totalDamage = damageComponents.reduce((sum, d) => sum + d.damage, 0);
 
+  // Extract Defiance buff from the original power data (not redirect)
+  const defiance = extractDefiance(data, namedTables, levelIndex);
+
   const at = arcanaTime(castTime);
 
   return {
@@ -74,6 +77,7 @@ async function parseSinglePower(slug, data, namedTables, levelIndex, archetype, 
     totalDamage,
     damageComponents,
     dpa: totalDamage / at,
+    defiance,
     isRedirected,
     availableLevel: data.available_level || 1,
   };
@@ -104,6 +108,8 @@ async function parseRainOfFire(slug, data, namedTables, levelIndex, archetype, p
     totalDamage = 0;
   }
 
+  const defiance = extractDefiance(data, namedTables, levelIndex);
+
   return {
     slug,
     name: data.display_name || data.name || slug,
@@ -116,10 +122,42 @@ async function parseRainOfFire(slug, data, namedTables, levelIndex, archetype, p
     totalDamage,
     damageComponents: [{ type: 'Fire', damage: totalDamage, source: 'pet' }],
     dpa: totalDamage / at,
+    defiance,
     isRedirected: false,
     isPetDamage: true,
     availableLevel: data.available_level || 1,
   };
+}
+
+// Extract Defiance self-damage buff from a power
+// Returns { scale, duration, stacking } or null if no buff
+function extractDefiance(powerData, namedTables, levelIndex) {
+  for (const effect of (powerData.effects || [])) {
+    if (effect.is_pvp === 'PVP') continue;
+
+    for (const tpl of (effect.templates || [])) {
+      const attribs = tpl.attribs || [];
+      const hasDamage = attribs.some(a => DAMAGE_ATTRIBS.has(a));
+      if (!hasDamage) continue;
+      if (tpl.aspect !== 'Strength') continue;
+      if (tpl.target !== 'Self') continue;
+
+      const scale = tpl.scale || 0;
+      if (scale === 0) return null;
+
+      // Parse duration
+      const durationStr = tpl.duration || '0 seconds';
+      const match = durationStr.match(/([\d.]+)\s*seconds?/);
+      const duration = match ? parseFloat(match[1]) : 0;
+
+      return {
+        scale,       // damage buff percentage (e.g., 0.066 = 6.6%)
+        duration,    // how long the buff lasts
+        stacking: tpl.stack || 'Stack', // Stack or Replace
+      };
+    }
+  }
+  return null;
 }
 
 function extractDamage(powerData, namedTables, levelIndex) {
