@@ -1,6 +1,7 @@
 // Attack chain optimizer: finds the highest DPS repeating chain
 // Supports greedy and exhaustive search up to chain length 8
 // Models Defiance (Blaster inherent) damage buff stacking
+// Handles wait time when powers are on cooldown (dead time lowers DPS)
 
 import { arcanaTime } from './arcanatime.js';
 
@@ -8,6 +9,8 @@ const MAX_CHAIN_LENGTH = 8;
 const TOP_N = 5;
 // Number of full cycles to simulate for Defiance to reach steady state
 const DEFIANCE_WARMUP_CYCLES = 3;
+// Skip chains where estimated wait time would exceed this multiple of cast time
+const MAX_WAIT_RATIO = 3;
 
 export function optimizeChains(powers, rechargeReduction, enhancementConfig = null) {
   if (!powers || powers.length === 0) return [];
@@ -47,9 +50,9 @@ function searchChains(powers, length, results) {
 
     const chain = indices.map(i => powers[i]);
 
-    if (!isChainFeasible(chain)) continue;
+    if (!isChainWorthSimulating(chain)) continue;
 
-    // Simulate with Defiance buffs for accurate DPS
+    // Simulate with Defiance buffs and cooldown waits for accurate DPS
     const simResult = simulateChainWithDefiance(chain);
 
     results.push({
@@ -77,29 +80,38 @@ function searchChains(powers, length, results) {
   }
 }
 
-// Simulate a repeating chain with Defiance buff tracking.
-// Runs several cycles to let buffs reach steady state, then measures the last cycle.
+// Simulate a repeating chain with Defiance buff tracking and cooldown waits.
+// Runs several cycles to let buffs and cooldowns reach steady state, then measures the last cycle.
 function simulateChainWithDefiance(chain) {
-  const cycleTime = chain.reduce((sum, p) => sum + p.arcanaTime, 0);
   const totalCycles = DEFIANCE_WARMUP_CYCLES + 1; // warmup + 1 measurement cycle
 
   // Active Defiance buffs: [{slug, scale, expiresAt, stacking}]
   let activeBuffs = [];
+  // Cooldown tracking: slug -> absolute time when power becomes available
+  const cooldowns = {};
   let currentTime = 0;
 
   // Per-power results for the measurement cycle
   let measureDamage = [];
   let measureDefianceMult = [];
+  let measureStartTime = 0;
 
   for (let cycle = 0; cycle < totalCycles; cycle++) {
     const isMeasureCycle = cycle === totalCycles - 1;
     if (isMeasureCycle) {
       measureDamage = [];
       measureDefianceMult = [];
+      measureStartTime = currentTime;
     }
 
     for (let i = 0; i < chain.length; i++) {
       const power = chain[i];
+
+      // Wait for power to come off cooldown
+      const readyAt = cooldowns[power.slug] || 0;
+      if (readyAt > currentTime) {
+        currentTime = readyAt;
+      }
 
       // Remove expired buffs
       activeBuffs = activeBuffs.filter(b => b.expiresAt > currentTime);
@@ -135,12 +147,15 @@ function simulateChainWithDefiance(chain) {
         }
       }
 
+      // Recharge starts from activation (overlaps with cast animation)
+      cooldowns[power.slug] = currentTime + power.effectiveRecharge;
+
       currentTime += power.arcanaTime;
     }
   }
 
   const totalDamage = measureDamage.reduce((sum, d) => sum + d, 0);
-  const totalTime = cycleTime;
+  const totalTime = currentTime - measureStartTime; // actual elapsed time including waits
   const avgMult = measureDefianceMult.reduce((sum, m) => sum + m, 0) / measureDefianceMult.length;
 
   return {
@@ -153,32 +168,22 @@ function simulateChainWithDefiance(chain) {
   };
 }
 
-function isChainFeasible(chain) {
-  const totalTime = chain.reduce((sum, p) => sum + p.arcanaTime, 0);
+// Quick pre-filter to skip chains that would have absurd wait times.
+// For each power appearing K times, the repeating cycle needs at least
+// K * effectiveRecharge total time. If that far exceeds the cast time, skip.
+function isChainWorthSimulating(chain) {
+  const castTime = chain.reduce((sum, p) => sum + p.arcanaTime, 0);
 
-  const usagesBySlug = {};
-  let timePos = 0;
-  for (let i = 0; i < chain.length; i++) {
-    const slug = chain[i].slug;
-    if (!usagesBySlug[slug]) usagesBySlug[slug] = [];
-    usagesBySlug[slug].push({
-      time: timePos,
-      recharge: chain[i].effectiveRecharge,
-    });
-    timePos += chain[i].arcanaTime;
+  const counts = {};
+  for (const p of chain) {
+    if (!counts[p.slug]) counts[p.slug] = { count: 0, recharge: p.effectiveRecharge };
+    counts[p.slug].count++;
   }
 
-  for (const [slug, usages] of Object.entries(usagesBySlug)) {
-    for (let i = 0; i < usages.length; i++) {
-      const nextIdx = (i + 1) % usages.length;
-      let gap;
-      if (nextIdx > i) {
-        gap = usages[nextIdx].time - usages[i].time;
-      } else {
-        gap = (totalTime - usages[i].time) + usages[nextIdx].time;
-      }
-
-      if (gap < usages[i].recharge - 0.001) {
+  for (const { count, recharge } of Object.values(counts)) {
+    if (count > 1) {
+      const minCycleNeeded = count * recharge;
+      if (minCycleNeeded > castTime * MAX_WAIT_RATIO) {
         return false;
       }
     }
@@ -234,6 +239,7 @@ export function greedyChain(powers, rechargeReduction, maxLength = 20) {
   let totalTime = 0;
 
   for (let step = 0; step < maxLength; step++) {
+    // Find highest DPA power that's ready, or wait for the soonest one
     let best = null;
     for (const p of byDpa) {
       const cd = cooldowns[p.slug] || 0;
@@ -243,7 +249,28 @@ export function greedyChain(powers, rechargeReduction, maxLength = 20) {
       }
     }
 
-    if (!best) break;
+    // Nothing ready — wait for the soonest power to come off cooldown
+    if (!best) {
+      let soonest = Infinity;
+      let soonestPower = null;
+      for (const p of byDpa) {
+        const cd = cooldowns[p.slug] || 0;
+        if (cd < soonest) {
+          soonest = cd;
+          soonestPower = p;
+        }
+      }
+      if (!soonestPower) break;
+
+      // Wait out the cooldown
+      const waitTime = soonest;
+      for (const slug of Object.keys(cooldowns)) {
+        cooldowns[slug] -= waitTime;
+      }
+      currentTime += waitTime;
+      totalTime += waitTime;
+      best = soonestPower;
+    }
 
     // Remove expired buffs and calculate multiplier
     activeBuffs = activeBuffs.filter(b => b.expiresAt > currentTime);
