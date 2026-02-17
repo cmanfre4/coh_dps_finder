@@ -154,16 +154,16 @@ export function renderResults({ rangedChains, hybridChains, aoeChains, numTarget
     return;
   }
 
+  if (hasAoe) {
+    renderChainSection(aoeChains, container, 'aoe', `AoE Chain (${numTargets} targets)`, true);
+  }
+
   if (hasRanged) {
     renderChainSection(rangedChains, container, 'ranged', 'Ranged Chain');
   }
 
   if (hasHybrid) {
     renderChainSection(hybridChains, container, 'hybrid', 'Melee / Hybrid Chain');
-  }
-
-  if (hasAoe) {
-    renderChainSection(aoeChains, container, 'aoe', `AoE Chain (${numTargets} targets)`, true);
   }
 }
 

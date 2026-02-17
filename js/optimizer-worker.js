@@ -47,7 +47,7 @@ self.onmessage = function(e) {
       });
 
       self.postMessage({ type: 'pass', pass: `AoE (${nt}t)` });
-      aoeChains = optimizeChains(aoePowers, buffPowers || [], rechargeReduction, activationLatency || 0, `AoE (${nt}t)`);
+      aoeChains = optimizeChains(aoePowers, buffPowers || [], rechargeReduction, activationLatency || 0, `AoE (${nt}t)`, 10);
 
       // Annotate chain powers with targets hit info
       if (aoeChains) {
@@ -68,7 +68,8 @@ self.onmessage = function(e) {
   }
 };
 
-function optimizeChains(powers, buffPowers, rechargeReduction, activationLatency, passLabel) {
+function optimizeChains(powers, buffPowers, rechargeReduction, activationLatency, passLabel, topN) {
+  topN = topN || TOP_N;
   if (!powers || powers.length === 0) return [];
 
   const powersWithRecharge = powers.map(p => {
@@ -132,7 +133,7 @@ function optimizeChains(powers, buffPowers, rechargeReduction, activationLatency
 
   results.sort((a, b) => b.dps - a.dps);
   const unique = deduplicateChains(results);
-  const topChains = unique.slice(0, TOP_N).map(rotateChainToHighestDpa);
+  const topChains = unique.slice(0, topN).map(rotateChainToHighestDpa);
 
   // Apply buff overlay to top chains if there are buff powers
   if (preparedBuffs.length > 0) {
