@@ -24,7 +24,7 @@ export function getDefaultSlotConfig() {
   return {
     global: {
       damage: 3,
-      recharge: 3,
+      recharge: 2,
       accuracy: 0,
       endurance: 0,
     },

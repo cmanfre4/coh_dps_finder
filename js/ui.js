@@ -45,7 +45,8 @@ export function initEnhancementControls(onChange) {
   function syncPreset() {
     const dmg = parseInt(dmgSlider.value, 10);
     const rech = parseInt(rechSlider.value, 10);
-    if (dmg === 3 && rech === 3) preset.value = '3/3';
+    if (dmg === 3 && rech === 2) preset.value = '3/2';
+    else if (dmg === 3 && rech === 3) preset.value = '3/3';
     else if (dmg === 5 && rech === 1) preset.value = '5/1';
     else if (dmg === 0 && rech === 0) preset.value = '0/0';
     else preset.value = 'custom';
@@ -53,7 +54,8 @@ export function initEnhancementControls(onChange) {
 
   preset.addEventListener('change', () => {
     const val = preset.value;
-    if (val === '3/3') { dmgSlider.value = 3; rechSlider.value = 3; }
+    if (val === '3/2') { dmgSlider.value = 3; rechSlider.value = 2; }
+    else if (val === '3/3') { dmgSlider.value = 3; rechSlider.value = 3; }
     else if (val === '5/1') { dmgSlider.value = 5; rechSlider.value = 1; }
     else if (val === '0/0') { dmgSlider.value = 0; rechSlider.value = 0; }
     updateDisplay();
