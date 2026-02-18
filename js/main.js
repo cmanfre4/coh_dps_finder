@@ -19,6 +19,10 @@ const state = {
   disabledPowers: new Set(),
 };
 
+function formatPowersetName(slug) {
+  return slug.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
 async function init() {
   // Bind UI events
   const rechargeSlider = document.getElementById('recharge-slider');
@@ -75,12 +79,17 @@ async function init() {
     const secondaryParsed = await parsePowers(
       state.rawSecondaryPowers, state.tables, state.archetype, state.secondaryPowerset, state.level
     );
+    primaryParsed.forEach(p => p.powersetSlug = state.powerset);
+    secondaryParsed.forEach(p => p.powersetSlug = state.secondaryPowerset);
     state.parsedPowers = [...primaryParsed, ...secondaryParsed];
 
     renderPowerList(
-      state.parsedPowers.filter(p => !p.isBuff),
+      state.parsedPowers,
       document.getElementById('power-list'),
-      state.parsedPowers.filter(p => p.isBuff),
+      [
+        { slug: state.powerset, label: formatPowersetName(state.powerset) },
+        { slug: state.secondaryPowerset, label: formatPowersetName(state.secondaryPowerset) },
+      ],
       state.disabledPowers
     );
 
@@ -122,21 +131,27 @@ async function runOptimizer() {
   const secondaryParsed = await parsePowers(
     state.rawSecondaryPowers, state.tables, state.archetype, state.secondaryPowerset, state.level
   );
+  primaryParsed.forEach(p => p.powersetSlug = state.powerset);
+  secondaryParsed.forEach(p => p.powersetSlug = state.secondaryPowerset);
   state.parsedPowers = [...primaryParsed, ...secondaryParsed];
 
   // Apply enhancements to parsed powers
   const enhConfig = getEnhancementConfigFromUI();
   const enhancedPowers = state.parsedPowers.map(p => applyEnhancements(p, enhConfig));
 
-  // Separate attack powers (deal damage) from buff powers (Aim, Build Up, etc.)
-  const allAttackPowers = enhancedPowers.filter(p => !p.isBuff);
-  const allBuffPowers = enhancedPowers.filter(p => p.isBuff);
-
-  renderPowerList(allAttackPowers, document.getElementById('power-list'), allBuffPowers, state.disabledPowers);
+  renderPowerList(
+    enhancedPowers,
+    document.getElementById('power-list'),
+    [
+      { slug: state.powerset, label: formatPowersetName(state.powerset) },
+      { slug: state.secondaryPowerset, label: formatPowersetName(state.secondaryPowerset) },
+    ],
+    state.disabledPowers
+  );
 
   // Filter out disabled powers before sending to worker
-  const attackPowers = allAttackPowers.filter(p => !state.disabledPowers.has(p.slug));
-  const buffPowers = allBuffPowers.filter(p => !state.disabledPowers.has(p.slug));
+  const attackPowers = enhancedPowers.filter(p => !p.isBuff && !state.disabledPowers.has(p.slug));
+  const buffPowers = enhancedPowers.filter(p => p.isBuff && !state.disabledPowers.has(p.slug));
 
   // Terminate any existing worker
   if (state.worker) {

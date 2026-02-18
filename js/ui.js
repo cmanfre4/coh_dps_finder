@@ -97,7 +97,7 @@ export function getEnhancementConfigFromUI() {
   };
 }
 
-export function renderPowerList(powers, container, buffPowers, disabledPowers) {
+export function renderPowerList(powers, container, powersets, disabledPowers) {
   container.innerHTML = '';
   const disabled = disabledPowers || new Set();
 
@@ -106,61 +106,73 @@ export function renderPowerList(powers, container, buffPowers, disabledPowers) {
     return;
   }
 
-  // Sort by DPA descending
-  const sorted = [...powers].sort((a, b) => b.dpa - a.dpa);
+  for (const ps of powersets) {
+    const setPowers = powers.filter(p => p.powersetSlug === ps.slug);
+    if (setPowers.length === 0) continue;
 
-  for (const power of sorted) {
-    const isDisabled = disabled.has(power.slug);
-    const item = document.createElement('div');
-    item.className = `power-item${isDisabled ? ' excluded' : ''}`;
-    item.innerHTML = `
-      <input type="checkbox" class="power-toggle" data-slug="${power.slug}" ${isDisabled ? '' : 'checked'} />
-      <span class="power-name">${power.name}</span>
-      <span class="power-stats">
-        ${power.castTime.toFixed(2)}s cast | ${power.rechargeTime.toFixed(1)}s rech | ${power.totalDamage.toFixed(1)} dmg
-        ${power.effectArea !== 'SingleTarget' ? ` | ${power.effectArea}` : ''}
-      </span>
-      <span class="power-dpa">${power.dpa.toFixed(1)} DPA</span>
-    `;
-    item.querySelector('.power-toggle').addEventListener('change', (e) => {
-      const enabled = e.target.checked;
-      item.classList.toggle('excluded', !enabled);
-      if (_powerToggleCallback) _powerToggleCallback(power.slug, enabled);
-    });
-    container.appendChild(item);
-  }
-
-  // Show buff powers if any
-  if (buffPowers && buffPowers.length > 0) {
+    // Section divider
     const divider = document.createElement('div');
     divider.className = 'power-list-divider';
-    divider.textContent = 'Click Buffs (used on cooldown)';
+    divider.textContent = ps.label;
     container.appendChild(divider);
 
-    for (const power of buffPowers) {
-      const dmgBuff = (power.buffs || []).find(b => b.table.toLowerCase() !== 'ranged_ones');
-      const buffPct = dmgBuff ? (dmgBuff.resolvedScale * 100).toFixed(1) : '?';
-      const buffDur = dmgBuff ? dmgBuff.duration.toFixed(0) : '?';
-      const isDisabled = disabled.has(power.slug);
+    // Attack powers sorted by DPA descending
+    const attacks = setPowers.filter(p => !p.isBuff).sort((a, b) => b.dpa - a.dpa);
+    for (const power of attacks) {
+      container.appendChild(renderAttackPowerItem(power, disabled));
+    }
 
-      const item = document.createElement('div');
-      item.className = `power-item buff-power-item${isDisabled ? ' excluded' : ''}`;
-      item.innerHTML = `
-        <input type="checkbox" class="power-toggle" data-slug="${power.slug}" ${isDisabled ? '' : 'checked'} />
-        <span class="power-name">${power.name}</span>
-        <span class="power-stats">
-          ${power.castTime.toFixed(2)}s cast | ${power.rechargeTime.toFixed(1)}s rech
-        </span>
-        <span class="power-buff-value">+${buffPct}% dmg / ${buffDur}s</span>
-      `;
-      item.querySelector('.power-toggle').addEventListener('change', (e) => {
-        const enabled = e.target.checked;
-        item.classList.toggle('excluded', !enabled);
-        if (_powerToggleCallback) _powerToggleCallback(power.slug, enabled);
-      });
-      container.appendChild(item);
+    // Buff powers in this set
+    const buffs = setPowers.filter(p => p.isBuff);
+    for (const power of buffs) {
+      container.appendChild(renderBuffPowerItem(power, disabled));
     }
   }
+}
+
+function renderAttackPowerItem(power, disabled) {
+  const isDisabled = disabled.has(power.slug);
+  const item = document.createElement('div');
+  item.className = `power-item${isDisabled ? ' excluded' : ''}`;
+  item.innerHTML = `
+    <input type="checkbox" class="power-toggle" data-slug="${power.slug}" ${isDisabled ? '' : 'checked'} />
+    <span class="power-name">${power.name}</span>
+    <span class="power-stats">
+      ${power.castTime.toFixed(2)}s cast | ${power.rechargeTime.toFixed(1)}s rech | ${power.totalDamage.toFixed(1)} dmg
+      ${power.effectArea !== 'SingleTarget' ? ` | ${power.effectArea}` : ''}
+    </span>
+    <span class="power-dpa">${power.dpa.toFixed(1)} DPA</span>
+  `;
+  item.querySelector('.power-toggle').addEventListener('change', (e) => {
+    const enabled = e.target.checked;
+    item.classList.toggle('excluded', !enabled);
+    if (_powerToggleCallback) _powerToggleCallback(power.slug, enabled);
+  });
+  return item;
+}
+
+function renderBuffPowerItem(power, disabled) {
+  const dmgBuff = (power.buffs || []).find(b => b.table.toLowerCase() !== 'ranged_ones');
+  const buffPct = dmgBuff ? (dmgBuff.resolvedScale * 100).toFixed(1) : '?';
+  const buffDur = dmgBuff ? dmgBuff.duration.toFixed(0) : '?';
+  const isDisabled = disabled.has(power.slug);
+
+  const item = document.createElement('div');
+  item.className = `power-item buff-power-item${isDisabled ? ' excluded' : ''}`;
+  item.innerHTML = `
+    <input type="checkbox" class="power-toggle" data-slug="${power.slug}" ${isDisabled ? '' : 'checked'} />
+    <span class="power-name">${power.name}</span>
+    <span class="power-stats">
+      ${power.castTime.toFixed(2)}s cast | ${power.rechargeTime.toFixed(1)}s rech
+    </span>
+    <span class="power-buff-value">+${buffPct}% dmg / ${buffDur}s</span>
+  `;
+  item.querySelector('.power-toggle').addEventListener('change', (e) => {
+    const enabled = e.target.checked;
+    item.classList.toggle('excluded', !enabled);
+    if (_powerToggleCallback) _powerToggleCallback(power.slug, enabled);
+  });
+  return item;
 }
 
 export function renderResults({ rangedChains, hybridChains, aoeChains, numTargets }, container) {

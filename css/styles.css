@@ -593,16 +593,21 @@ input[type="range"]::-moz-range-thumb {
   clip-path: polygon(2px 0, 100% 0, calc(100% - 2px) 100%, 0 100%);
 }
 
-/* ---- Power List: Buff Powers ---- */
+/* ---- Power List: Powerset Dividers ---- */
 .power-list-divider {
   font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--data-warm-dim);
+  color: var(--accent);
   padding: 0.6rem 0.35rem 0.3rem;
   margin-top: 0.4rem;
   border-top: 1px solid var(--border);
+}
+
+.power-list-divider:first-child {
+  margin-top: 0;
+  border-top: none;
 }
 
 .buff-power-item .power-buff-value {
