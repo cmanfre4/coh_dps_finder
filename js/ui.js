@@ -2,6 +2,12 @@
 
 import { effectiveEnhancement } from './enhancements.js';
 
+let _powerToggleCallback = null;
+
+export function setPowerToggleCallback(cb) {
+  _powerToggleCallback = cb;
+}
+
 // Set up enhancement control event handlers
 // Returns a callback that reads the current enhancement config
 export function initEnhancementControls(onChange) {
@@ -91,8 +97,9 @@ export function getEnhancementConfigFromUI() {
   };
 }
 
-export function renderPowerList(powers, container, buffPowers) {
+export function renderPowerList(powers, container, buffPowers, disabledPowers) {
   container.innerHTML = '';
+  const disabled = disabledPowers || new Set();
 
   if (!powers || powers.length === 0) {
     container.innerHTML = '<div class="loading">No damage powers found.</div>';
@@ -103,9 +110,11 @@ export function renderPowerList(powers, container, buffPowers) {
   const sorted = [...powers].sort((a, b) => b.dpa - a.dpa);
 
   for (const power of sorted) {
+    const isDisabled = disabled.has(power.slug);
     const item = document.createElement('div');
-    item.className = 'power-item';
+    item.className = `power-item${isDisabled ? ' excluded' : ''}`;
     item.innerHTML = `
+      <input type="checkbox" class="power-toggle" data-slug="${power.slug}" ${isDisabled ? '' : 'checked'} />
       <span class="power-name">${power.name}</span>
       <span class="power-stats">
         ${power.castTime.toFixed(2)}s cast | ${power.rechargeTime.toFixed(1)}s rech | ${power.totalDamage.toFixed(1)} dmg
@@ -113,6 +122,11 @@ export function renderPowerList(powers, container, buffPowers) {
       </span>
       <span class="power-dpa">${power.dpa.toFixed(1)} DPA</span>
     `;
+    item.querySelector('.power-toggle').addEventListener('change', (e) => {
+      const enabled = e.target.checked;
+      item.classList.toggle('excluded', !enabled);
+      if (_powerToggleCallback) _powerToggleCallback(power.slug, enabled);
+    });
     container.appendChild(item);
   }
 
@@ -127,16 +141,23 @@ export function renderPowerList(powers, container, buffPowers) {
       const dmgBuff = (power.buffs || []).find(b => b.table.toLowerCase() !== 'ranged_ones');
       const buffPct = dmgBuff ? (dmgBuff.resolvedScale * 100).toFixed(1) : '?';
       const buffDur = dmgBuff ? dmgBuff.duration.toFixed(0) : '?';
+      const isDisabled = disabled.has(power.slug);
 
       const item = document.createElement('div');
-      item.className = 'power-item buff-power-item';
+      item.className = `power-item buff-power-item${isDisabled ? ' excluded' : ''}`;
       item.innerHTML = `
+        <input type="checkbox" class="power-toggle" data-slug="${power.slug}" ${isDisabled ? '' : 'checked'} />
         <span class="power-name">${power.name}</span>
         <span class="power-stats">
           ${power.castTime.toFixed(2)}s cast | ${power.rechargeTime.toFixed(1)}s rech
         </span>
         <span class="power-buff-value">+${buffPct}% dmg / ${buffDur}s</span>
       `;
+      item.querySelector('.power-toggle').addEventListener('change', (e) => {
+        const enabled = e.target.checked;
+        item.classList.toggle('excluded', !enabled);
+        if (_powerToggleCallback) _powerToggleCallback(power.slug, enabled);
+      });
       container.appendChild(item);
     }
   }

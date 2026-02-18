@@ -325,13 +325,19 @@ input[type="range"]::-moz-range-thumb {
 
 .power-item {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 18px auto 1fr auto;
   gap: 0.5rem;
   align-items: center;
   padding: 0.5rem 0.35rem;
   border-bottom: 1px solid var(--border);
   font-size: 0.82rem;
-  transition: background 0.1s;
+  transition: background 0.1s, opacity 0.15s;
+}
+
+.power-toggle {
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0;
 }
 
 .power-item:hover {

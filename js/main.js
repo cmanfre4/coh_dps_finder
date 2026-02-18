@@ -2,7 +2,7 @@
 
 import { loadArchetypeTables, loadAllPowers } from './data.js';
 import { parsePowers } from './power-parser.js';
-import { renderPowerList, renderResults, initEnhancementControls, getEnhancementConfigFromUI } from './ui.js';
+import { renderPowerList, renderResults, initEnhancementControls, getEnhancementConfigFromUI, setPowerToggleCallback } from './ui.js';
 import { applyEnhancements, getDefaultSlotConfig } from './enhancements.js';
 
 const state = {
@@ -16,6 +16,7 @@ const state = {
   rawSecondaryPowers: null,
   parsedPowers: null,
   worker: null,
+  disabledPowers: new Set(),
 };
 
 async function init() {
@@ -53,6 +54,15 @@ async function init() {
   // Enhancement controls (no-op onChange during init; just sets up listeners)
   initEnhancementControls(() => {});
 
+  // Power toggle callback
+  setPowerToggleCallback((slug, enabled) => {
+    if (enabled) {
+      state.disabledPowers.delete(slug);
+    } else {
+      state.disabledPowers.add(slug);
+    }
+  });
+
   // Load data
   try {
     state.tables = await loadArchetypeTables(state.archetype);
@@ -70,7 +80,8 @@ async function init() {
     renderPowerList(
       state.parsedPowers.filter(p => !p.isBuff),
       document.getElementById('power-list'),
-      state.parsedPowers.filter(p => p.isBuff)
+      state.parsedPowers.filter(p => p.isBuff),
+      state.disabledPowers
     );
 
     // Validate Flares damage
@@ -118,10 +129,14 @@ async function runOptimizer() {
   const enhancedPowers = state.parsedPowers.map(p => applyEnhancements(p, enhConfig));
 
   // Separate attack powers (deal damage) from buff powers (Aim, Build Up, etc.)
-  const attackPowers = enhancedPowers.filter(p => !p.isBuff);
-  const buffPowers = enhancedPowers.filter(p => p.isBuff);
+  const allAttackPowers = enhancedPowers.filter(p => !p.isBuff);
+  const allBuffPowers = enhancedPowers.filter(p => p.isBuff);
 
-  renderPowerList(attackPowers, document.getElementById('power-list'), buffPowers);
+  renderPowerList(allAttackPowers, document.getElementById('power-list'), allBuffPowers, state.disabledPowers);
+
+  // Filter out disabled powers before sending to worker
+  const attackPowers = allAttackPowers.filter(p => !state.disabledPowers.has(p.slug));
+  const buffPowers = allBuffPowers.filter(p => !state.disabledPowers.has(p.slug));
 
   // Terminate any existing worker
   if (state.worker) {
