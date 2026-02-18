@@ -116,14 +116,14 @@ export function renderPowerList(powers, container, powersets, disabledPowers) {
     divider.textContent = ps.label;
     container.appendChild(divider);
 
-    // Attack powers sorted by DPA descending
-    const attacks = setPowers.filter(p => !p.isBuff).sort((a, b) => b.dpa - a.dpa);
+    // Attack powers sorted by unlock level
+    const attacks = setPowers.filter(p => !p.isBuff).sort((a, b) => a.availableLevel - b.availableLevel);
     for (const power of attacks) {
       container.appendChild(renderAttackPowerItem(power, disabled));
     }
 
-    // Buff powers in this set
-    const buffs = setPowers.filter(p => p.isBuff);
+    // Buff powers in this set, sorted by unlock level
+    const buffs = setPowers.filter(p => p.isBuff).sort((a, b) => a.availableLevel - b.availableLevel);
     for (const power of buffs) {
       container.appendChild(renderBuffPowerItem(power, disabled));
     }
