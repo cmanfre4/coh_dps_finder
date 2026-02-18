@@ -901,8 +901,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .enh-pip.acc {
-  background: #50c878;
-  box-shadow: 0 0 4px rgba(80, 200, 120, 0.2);
+  background: #e8c800;
+  box-shadow: 0 0 4px rgba(232, 200, 0, 0.25);
 }
 
 .enh-pip.dmg {
@@ -911,8 +911,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .enh-pip.rech {
-  background: var(--data-warm);
-  box-shadow: 0 0 4px rgba(240, 160, 48, 0.2);
+  background: #7890a8;
+  box-shadow: 0 0 4px rgba(120, 144, 168, 0.25);
 }
 
 .enh-pip.over {
