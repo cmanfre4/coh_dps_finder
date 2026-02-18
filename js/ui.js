@@ -282,8 +282,9 @@ function renderTimeline(events, totalTime) {
   slugs.forEach((slug, i) => { colorMap[slug] = TIMELINE_COLORS[i % TIMELINE_COLORS.length]; });
 
   let trackHtml = '';
-  for (const evt of events) {
-    if (evt.waitBefore > 0) {
+  for (let ei = 0; ei < events.length; ei++) {
+    const evt = events[ei];
+    if (ei > 0 && evt.waitBefore > 0) {
       trackHtml += `<div class="timeline-wait" style="flex: ${evt.waitBefore}" title="Wait ${evt.waitBefore.toFixed(3)}s"></div>`;
     }
     const dur = evt.endTime - evt.startTime;
