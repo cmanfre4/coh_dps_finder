@@ -530,9 +530,25 @@ function deduplicateChains(chains) {
 }
 
 function normalizeChainKey(slugs) {
-  // Deduplicate by power composition: same set of powers (with counts)
-  // in any order is considered the same chain
-  return slugs.slice().sort().join(',');
+  // Reduce to minimal repeating unit, then sort to ignore rotation/order
+  const minimal = minimalRepeatingUnit(slugs);
+  return minimal.slice().sort().join(',');
+}
+
+function minimalRepeatingUnit(arr) {
+  const n = arr.length;
+  for (let len = 1; len <= n / 2; len++) {
+    if (n % len !== 0) continue;
+    let isRepeat = true;
+    for (let i = len; i < n; i++) {
+      if (arr[i] !== arr[i % len]) {
+        isRepeat = false;
+        break;
+      }
+    }
+    if (isRepeat) return arr.slice(0, len);
+  }
+  return arr;
 }
 
 // Rotate a chain result so it starts from the highest DPA power.
