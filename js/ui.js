@@ -20,7 +20,6 @@ export function initEnhancementControls(onChange) {
   const rechDisplay = document.getElementById('enh-recharge-display');
   const dmgEff = document.getElementById('enh-dmg-eff');
   const rechEff = document.getElementById('enh-rech-eff');
-  const slotMeter = document.getElementById('enh-slot-meter');
   const slotCount = document.getElementById('enh-slot-count');
   const pipsContainer = document.querySelector('.enh-slot-pips');
 
@@ -29,7 +28,11 @@ export function initEnhancementControls(onChange) {
     const dmg = parseInt(dmgSlider.value, 10);
     const rech = parseInt(rechSlider.value, 10);
     const total = acc + dmg + rech;
-    const isOver = total > 6;
+
+    // Cap each slider's max so total can't exceed 6
+    accSlider.max = 6 - dmg - rech;
+    dmgSlider.max = 6 - acc - rech;
+    rechSlider.max = 6 - acc - dmg;
 
     accDisplay.textContent = acc;
     dmgDisplay.textContent = dmg;
@@ -40,14 +43,13 @@ export function initEnhancementControls(onChange) {
 
     // Slot pips
     slotCount.textContent = `${total} / 6`;
-    slotMeter.classList.toggle('over', isOver);
 
     let pipsHtml = '';
-    for (let i = 0; i < Math.max(total, 6); i++) {
+    for (let i = 0; i < 6; i++) {
       let cls = '';
-      if (i < acc) cls = isOver ? 'over' : 'acc';
-      else if (i < acc + dmg) cls = isOver ? 'over' : 'dmg';
-      else if (i < total) cls = isOver ? 'over' : 'rech';
+      if (i < acc) cls = 'acc';
+      else if (i < acc + dmg) cls = 'dmg';
+      else if (i < total) cls = 'rech';
       pipsHtml += `<span class="enh-pip ${cls}"></span>`;
     }
     pipsContainer.innerHTML = pipsHtml;
@@ -58,8 +60,7 @@ export function initEnhancementControls(onChange) {
     const dmg = parseInt(dmgSlider.value, 10);
     const rech = parseInt(rechSlider.value, 10);
     if (acc === 1 && dmg === 3 && rech === 2) preset.value = '1/3/2';
-    else if (acc === 1 && dmg === 3 && rech === 3) preset.value = '1/3/3';
-    else if (acc === 1 && dmg === 5 && rech === 1) preset.value = '1/5/1';
+    else if (acc === 1 && dmg === 5 && rech === 0) preset.value = '1/5/0';
     else if (acc === 0 && dmg === 0 && rech === 0) preset.value = '0/0/0';
     else preset.value = 'custom';
   }
@@ -67,8 +68,7 @@ export function initEnhancementControls(onChange) {
   preset.addEventListener('change', () => {
     const val = preset.value;
     if (val === '1/3/2') { accSlider.value = 1; dmgSlider.value = 3; rechSlider.value = 2; }
-    else if (val === '1/3/3') { accSlider.value = 1; dmgSlider.value = 3; rechSlider.value = 3; }
-    else if (val === '1/5/1') { accSlider.value = 1; dmgSlider.value = 5; rechSlider.value = 1; }
+    else if (val === '1/5/0') { accSlider.value = 1; dmgSlider.value = 5; rechSlider.value = 0; }
     else if (val === '0/0/0') { accSlider.value = 0; dmgSlider.value = 0; rechSlider.value = 0; }
     updateDisplay();
     onChange();
