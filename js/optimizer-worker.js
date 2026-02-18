@@ -227,6 +227,7 @@ function searchChains(powers, length, totalCombos, maxDpa, globalBestDps, passLa
       eps: chain.reduce((sum, p) => sum + p.enduranceCost, 0) / simResult.totalTime,
       length,
       avgDefianceBuff: simResult.avgDefianceMult,
+      timeline: simResult.events,
     });
 
     // Periodic pruning
@@ -250,12 +251,14 @@ function simulateChainWithDefiance(chain) {
   let measureDamage = [];
   let measureDefianceMult = [];
   let measureStartTime = 0;
+  let measureEvents = [];
 
   for (let cycle = 0; cycle < totalCycles; cycle++) {
     const isMeasureCycle = cycle === totalCycles - 1;
     if (isMeasureCycle) {
       measureDamage = [];
       measureDefianceMult = [];
+      measureEvents = [];
       measureStartTime = currentTime;
     }
 
@@ -264,6 +267,7 @@ function simulateChainWithDefiance(chain) {
 
       // Wait for power to come off cooldown
       const readyAt = cooldowns[power.slug] || 0;
+      const waitBefore = readyAt > currentTime ? readyAt - currentTime : 0;
       if (readyAt > currentTime) {
         currentTime = readyAt;
       }
@@ -280,6 +284,15 @@ function simulateChainWithDefiance(chain) {
       if (isMeasureCycle) {
         measureDamage.push(effectiveDamage);
         measureDefianceMult.push(defianceMult);
+        measureEvents.push({
+          slug: power.slug,
+          name: power.name,
+          startTime: currentTime - measureStartTime,
+          endTime: currentTime - measureStartTime + power.arcanaTime,
+          waitBefore,
+          damage: effectiveDamage,
+          defianceMult,
+        });
       }
 
       // Apply this power's Defiance buff (if any)
@@ -315,6 +328,7 @@ function simulateChainWithDefiance(chain) {
     perPowerDamage: measureDamage,
     perPowerDefianceMult: measureDefianceMult,
     avgDefianceMult: avgMult,
+    events: measureEvents,
   };
 }
 
@@ -570,7 +584,12 @@ function rotateChainToHighestDpa(chain) {
 
   if (bestIdx === 0) return chain;
 
-  // Rotate powers array
+  // Rotate powers array and matching timeline events
   const rotated = powers.slice(bestIdx).concat(powers.slice(0, bestIdx));
-  return { ...chain, powers: rotated };
+  let rotatedTimeline = chain.timeline;
+  if (chain.timeline && chain.timeline.length === powers.length) {
+    rotatedTimeline = chain.timeline.slice(bestIdx).concat(chain.timeline.slice(0, bestIdx));
+  }
+
+  return { ...chain, powers: rotated, timeline: rotatedTimeline };
 }

@@ -264,6 +264,49 @@ function renderChainSection(chains, container, sectionId, heading, showTargets) 
   container.appendChild(section);
 }
 
+const TIMELINE_COLORS = [
+  '#00d4ff', // cyan
+  '#f0a030', // amber
+  '#ff4d6a', // red-pink
+  '#50c878', // green
+  '#b07aff', // purple
+  '#3a9bdc', // blue
+];
+
+function renderTimeline(events, totalTime) {
+  if (!events || events.length === 0) return '';
+
+  // Assign consistent colors by power slug
+  const slugs = [...new Set(events.map(e => e.slug))];
+  const colorMap = {};
+  slugs.forEach((slug, i) => { colorMap[slug] = TIMELINE_COLORS[i % TIMELINE_COLORS.length]; });
+
+  let trackHtml = '';
+  for (const evt of events) {
+    if (evt.waitBefore > 0) {
+      trackHtml += `<div class="timeline-wait" style="flex: ${evt.waitBefore}" title="Wait ${evt.waitBefore.toFixed(3)}s"></div>`;
+    }
+    const dur = evt.endTime - evt.startTime;
+    const color = colorMap[evt.slug];
+    trackHtml += `<div class="timeline-power" style="flex: ${dur}; background: ${color}" title="${evt.name}: ${dur.toFixed(3)}s cast, ${evt.damage.toFixed(1)} dmg"><span class="timeline-power-label">${evt.name}</span></div>`;
+  }
+
+  // Time axis markers at 1s intervals
+  const totalSec = Math.ceil(totalTime);
+  let axisHtml = '';
+  for (let s = 0; s <= totalSec; s++) {
+    const pct = (s / totalTime) * 100;
+    axisHtml += `<span class="timeline-axis-marker" style="left: ${pct}%">${s}s</span>`;
+  }
+
+  return `
+    <div class="chain-timeline">
+      <div class="timeline-track">${trackHtml}</div>
+      <div class="timeline-axis">${axisHtml}</div>
+    </div>
+  `;
+}
+
 function renderChainDetail(chain, index, showTargets) {
   const chainVisual = chain.powers
     .map(p => `<span class="chain-power">${p.name}</span>`)
@@ -292,6 +335,7 @@ function renderChainDetail(chain, index, showTargets) {
   return `
     <h3>${index === 0 ? 'Optimal' : `#${index + 1}`} Attack Chain</h3>
     <div class="chain-visual">${chainVisual}<span class="chain-arrow"> &circlearrowleft;</span></div>
+    ${renderTimeline(chain.timeline, chain.totalTime)}
     <div class="chain-stats">
       <div class="stat-box">
         <div class="stat-label">DPS</div>
