@@ -64,15 +64,20 @@
         <div class="control-group">
           <label for="enh-preset">Preset</label>
           <select id="enh-preset">
-            <option value="3/2">3 Dmg / 2 Rech (Standard)</option>
-            <option value="3/3">3 Dmg / 3 Rech</option>
-            <option value="5/1">5 Dmg / 1 Rech</option>
-            <option value="0/0">Unslotted</option>
+            <option value="1/3/2">1 Acc / 3 Dmg / 2 Rech (Standard)</option>
+            <option value="1/3/3">1 Acc / 3 Dmg / 3 Rech</option>
+            <option value="1/5/1">1 Acc / 5 Dmg / 1 Rech</option>
+            <option value="0/0/0">Unslotted</option>
             <option value="custom">Custom</option>
           </select>
         </div>
 
         <div class="enh-slider-group">
+          <div class="enh-slider-row">
+            <label for="enh-accuracy-slider">Accuracy</label>
+            <input type="range" id="enh-accuracy-slider" min="0" max="6" value="1" step="1">
+            <span class="enh-count" id="enh-accuracy-display">1</span>
+          </div>
           <div class="enh-slider-row">
             <label for="enh-damage-slider">Damage</label>
             <input type="range" id="enh-damage-slider" min="0" max="6" value="3" step="1">
@@ -91,12 +96,12 @@
             <span id="enh-slot-count">6 / 6</span>
           </div>
           <div class="enh-slot-pips">
+            <span class="enh-pip acc"></span>
             <span class="enh-pip dmg"></span>
             <span class="enh-pip dmg"></span>
             <span class="enh-pip dmg"></span>
             <span class="enh-pip rech"></span>
             <span class="enh-pip rech"></span>
-            <span class="enh-pip"></span>
           </div>
         </div>
 

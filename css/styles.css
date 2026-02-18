@@ -826,6 +826,11 @@ input[type="range"]::-moz-range-thumb {
   clip-path: polygon(2px 0, 100% 0, calc(100% - 2px) 100%, 0 100%);
 }
 
+.enh-pip.acc {
+  background: #50c878;
+  box-shadow: 0 0 4px rgba(80, 200, 120, 0.2);
+}
+
 .enh-pip.dmg {
   background: var(--highlight);
   box-shadow: 0 0 4px var(--highlight-glow);
